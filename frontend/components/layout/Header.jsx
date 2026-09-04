@@ -12,7 +12,11 @@ export default function Header({ active, onChange, brand = 'Padeliticos', hideNa
   return (
     <header className="header">
       <h1>
-        {brand}
+        {brand === 'Padeliticos' ? (
+          <>Padel<span>iticos</span></>
+        ) : (
+          <>Super <span>Padelitico</span></>
+        )}
       </h1>
       {!hideNavigation && (
         <nav>

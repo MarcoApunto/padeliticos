@@ -54,7 +54,12 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Header active={tab} onChange={setTab} />
+      <Header
+        active={tab}
+        onChange={setTab}
+        brand={adminOpen ? 'Super Padelitico' : 'Padeliticos'}
+        hideNavigation={adminOpen}
+      />
 
       {loading && <p className="text-muted">Cargando…</p>}
 

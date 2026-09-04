@@ -221,7 +221,7 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
   if (!unlocked) {
     return (
       <section className="admin-page">
-        <div className="admin-page__top"><h2>Administración</h2><button type="button" onClick={onClose}>Cerrar</button></div>
+        <div className="admin-page__top"><h2>Super Padelitico</h2><button type="button" onClick={onClose}>Cerrar</button></div>
         <form className="admin-login" onSubmit={unlock}>
           <label>Clave de administrador<input type="password" value={keyInput} onChange={(event) => setKeyInput(event.target.value)} autoFocus /></label>
           <button type="submit">Desbloquear</button>
@@ -234,7 +234,7 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
 
   return (
     <section className="admin-page">
-      <div className="admin-page__top"><h2>Administración</h2><button type="button" onClick={onClose}>Cerrar</button></div>
+      <div className="admin-page__top"><h2>Super Padelitico</h2><button type="button" onClick={onClose}>Cerrar</button></div>
       {error && <p className="admin-page__error" role="alert">{error}</p>}
       {message && <p className="admin-page__message" role="status">{message}</p>}
 

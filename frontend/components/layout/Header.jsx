@@ -8,24 +8,26 @@ const TABS = [
   { id: 'players', label: 'Jugadores' },
 ];
 
-export default function Header({ active, onChange }) {
+export default function Header({ active, onChange, brand = 'Padeliticos', hideNavigation = false }) {
   return (
     <header className="header">
       <h1>
-        Padel<span>itico</span>
+        {brand}
       </h1>
-      <nav>
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            data-active={active === tab.id || undefined}
-            onClick={() => onChange(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      {!hideNavigation && (
+        <nav>
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              data-active={active === tab.id || undefined}
+              onClick={() => onChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      )}
 
       <style>{`
         .header {

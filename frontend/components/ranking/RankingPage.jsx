@@ -27,51 +27,6 @@ export default function RankingPage({ players }) {
           </li>
         ))}
       </ol>
-
-      <style>{`
-        .ranking h2 { margin-bottom: 4px; }
-        .ranking > p { margin-bottom: 20px; font-size: 13px; }
-        .ranking__list {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .ranking__row {
-          display: grid;
-          grid-template-columns: 24px 1fr 120px 52px;
-          align-items: center;
-          gap: 12px;
-          padding: 10px 14px;
-          background: var(--surface);
-          border-radius: var(--radius-md);
-        }
-        .ranking__pos {
-          color: var(--text-muted);
-          font-size: 13px;
-        }
-        .ranking__name {
-          font-size: 14px;
-          font-weight: 500;
-        }
-        .ranking__bar {
-          height: 6px;
-          border-radius: 4px;
-          background: var(--surface-raised);
-          overflow: hidden;
-        }
-        .ranking__bar-fill {
-          height: 100%;
-          background: var(--accent);
-        }
-        .ranking__elo {
-          text-align: right;
-          color: var(--accent);
-          font-size: 14px;
-        }
-      `}</style>
     </div>
   );
 }

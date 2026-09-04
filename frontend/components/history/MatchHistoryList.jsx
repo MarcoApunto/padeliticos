@@ -42,67 +42,6 @@ export default function MatchHistoryList({ entries }) {
           </li>
         );
       })}
-
-      <style>{`
-        .match-history {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .match-history li {
-          padding: 12px 14px;
-          background: var(--surface);
-          border-radius: var(--radius-md);
-          border-left: 3px solid transparent;
-        }
-        .match-history li[data-result='win'] { border-left-color: var(--team-a); }
-        .match-history li[data-result='loss'] { border-left-color: var(--danger); }
-        .match-history__meta {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 12px;
-          color: var(--text-muted);
-          margin-bottom: 6px;
-        }
-        .match-history__badge {
-          font-size: 11px;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 999px;
-        }
-        .match-history__badge[data-result='win'] {
-          background: rgba(94, 200, 194, 0.15);
-          color: var(--team-a);
-        }
-        .match-history__badge[data-result='loss'] {
-          background: rgba(226, 96, 79, 0.15);
-          color: var(--danger);
-        }
-        .match-history__lineup {
-          display: flex;
-          gap: 10px;
-          font-size: 13px;
-          margin-bottom: 6px;
-        }
-        .match-history__elo {
-          font-size: 13px;
-          color: var(--text);
-          display: flex;
-          gap: 8px;
-          align-items: center;
-        }
-        .match-history__delta {
-          font-size: 12px;
-          color: var(--danger);
-        }
-        .match-history__delta[data-positive] {
-          color: var(--team-a);
-        }
-      `}</style>
     </ul>
   );
 }

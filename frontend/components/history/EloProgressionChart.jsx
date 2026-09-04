@@ -114,18 +114,6 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
       {hoveredPoint && <div className="elo-chart__tooltip" style={{ left: `${(hover.x / W) * 100}%`, top: `${(hover.y / H) * 100}%` }}><strong style={{ color: isMulti ? colorForId(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong><span className="numeric">{hoveredPoint.elo.toFixed(2)}</span></div>}
       {isMulti && <div className="elo-chart__legend elo-chart__legend--multi">{validSeries.map((entry) => <span key={entry.id} data-dimmed={(hover && hover.seriesId !== entry.id) || undefined}><i style={{ background: colorForId(entry.id) }} />{entry.name}</span>)}</div>}
       {!isMulti && <div className="elo-chart__legend"><span><i data-dot="win" /> Victoria</span><span><i data-dot="loss" /> Derrota</span></div>}
-
-      <style>{`
-        .elo-chart { position: relative; }
-        .elo-chart svg { width: 100%; height: auto; display: block; cursor: crosshair; }
-        .elo-chart__tooltip { position: absolute; transform: translate(-50%, -130%); background: var(--surface-raised); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
-        .elo-chart__legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
-        .elo-chart__legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
-        .elo-chart__legend i[data-dot='win'] { background: var(--team-a); }
-        .elo-chart__legend i[data-dot='loss'] { background: var(--danger); }
-        .elo-chart__legend--multi span { transition: opacity 120ms ease; }
-        .elo-chart__legend--multi span[data-dimmed] { opacity: 0.35; }
-      `}</style>
     </div>
   );
 }

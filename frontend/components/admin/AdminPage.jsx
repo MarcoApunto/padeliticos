@@ -341,44 +341,5 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
 }
 
 function AdminStyles() {
-  return <style>{`
-    .admin-page { display: flex; flex-direction: column; gap: 16px; }
-    .admin-page__top, .admin-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .admin-page__top { justify-content: space-between; }
-    .admin-section { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--surface); border-radius: var(--radius-md); }
-    .admin-section h3 { font-size: 15px; margin-bottom: 4px; }
-    .admin-row { padding: 8px 0; border-top: 1px solid rgba(237, 235, 222, 0.1); }
-    .admin-row input, .admin-section > select, .admin-login input { min-width: 0; padding: 8px 10px; background: var(--surface-raised); color: var(--text); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); }
-    .admin-row input:first-child { flex: 1; }
-    .admin-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px; color: var(--text-muted); font-size: 11px; }
-    .admin-field--k { flex: 0 1 210px; }
-    .admin-field small { color: var(--text-muted); font-size: 10px; }
-    .admin-field output { padding: 8px 10px; background: var(--surface-raised); color: var(--accent); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); font-family: var(--font-display); }
-    .admin-row button, .admin-page__top button, .admin-login button { padding: 8px 12px; border: 1px solid rgba(237, 235, 222, 0.2); border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); }
-    .admin-row button:hover, .admin-page__top button:hover, .admin-login button:hover { border-color: var(--accent); color: var(--accent); }
-    .admin-danger { color: var(--danger) !important; border-color: var(--danger) !important; }
-    .admin-login { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; padding: 16px; background: var(--surface); border-radius: var(--radius-md); }
-    .admin-login label { display: flex; flex-direction: column; gap: 6px; color: var(--text-muted); font-size: 12px; }
-    .admin-page__error { margin: 0; padding: 10px 12px; color: var(--danger); border: 1px solid var(--danger); border-radius: var(--radius-sm); }
-    .admin-page__message { margin: 0; padding: 10px 12px; color: var(--team-a); border: 1px solid var(--team-a); border-radius: var(--radius-sm); }
-    .admin-page__note { color: var(--text-muted); font-size: 12px; margin: 0; }
-    .admin-match-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface-raised); border: 1px solid rgba(237, 235, 222, 0.1); border-left: 3px solid var(--accent); border-radius: var(--radius-md); }
-    .admin-match-card[data-played] { border-left-color: var(--team-a); }
-    .admin-match-card__topline, .admin-match-card__actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .admin-match-card__number { color: var(--accent); font-size: 14px; }
-    .admin-match-card__status { color: var(--text-muted); font-size: 12px; }
-    .admin-match-card__teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
-    .admin-match-card__team { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 9px 10px; border: 1px solid var(--team-a-dim); border-radius: var(--radius-sm); }
-    .admin-match-card__team[data-team='b'] { border-color: var(--team-b-dim); }
-    .admin-match-card__team[data-winner] { background: rgba(94, 200, 194, 0.1); }
-    .admin-match-card__team[data-team='b'][data-winner] { background: rgba(232, 147, 90, 0.1); }
-    .admin-match-card__team > span:last-child { overflow-wrap: anywhere; font-size: 13px; }
-    .admin-match-card__team-label { color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
-    .admin-match-card__vs { color: var(--text-muted); font-size: 12px; }
-    .admin-match-card__actions { justify-content: flex-end; }
-    .admin-match-card__number-edit { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 11px; }
-    .admin-match-card__number-edit input { width: 62px; padding: 7px 8px; background: var(--surface); color: var(--text); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); }
-    @media (max-width: 560px) { .admin-row input { width: 100%; } .admin-row input:first-child { flex: auto; } }
-    @media (max-width: 560px) { .admin-match-card__teams { grid-template-columns: 1fr; } .admin-match-card__vs { text-align: center; } .admin-match-card__actions { justify-content: flex-start; } }
-  `}</style>;
+  return;
 }

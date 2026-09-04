@@ -65,54 +65,6 @@ export default function MatchesPage() {
           ))}
         </ul>
       )}
-
-      <style>{`
-        .matches-page__header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-        .matches-page__header select {
-          min-width: 0;
-          background: var(--surface-raised);
-          color: var(--text);
-          border: 1px solid rgba(237, 235, 222, 0.15);
-          border-radius: var(--radius-sm);
-          padding: 8px 12px;
-          font-size: 13px;
-        }
-        .matches-page__list {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .matches-page__error {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 14px 16px;
-          background: var(--surface);
-          border: 1px solid var(--danger);
-          border-radius: var(--radius-md);
-          color: var(--danger);
-        }
-        .matches-page__error p { margin: 0; }
-        .matches-page__error button {
-          flex-shrink: 0;
-          padding: 8px 12px;
-          border: 1px solid var(--danger);
-          border-radius: var(--radius-sm);
-          background: transparent;
-          color: var(--danger);
-        }
-      `}</style>
     </div>
   );
 }
@@ -145,41 +97,6 @@ function MatchRow({ match }) {
         </div>
         <TeamSide team={match.teamB} won={match.winner === 2} side="b" />
       </div>
-
-      <style>{`
-        .match-row {
-          padding: 14px 16px;
-          background: var(--surface);
-          border-radius: var(--radius-lg);
-        }
-        .match-row__meta {
-          display: flex;
-          justify-content: space-between;
-          font-size: 11px;
-          color: var(--text-muted);
-          margin-bottom: 10px;
-        }
-        .match-row__teams {
-          display: grid;
-          grid-template-columns: 1fr auto 1fr;
-          align-items: center;
-          gap: 12px;
-        }
-        .match-row__vs {
-          font-size: 11px;
-          color: var(--text-muted);
-          text-align: center;
-        }
-        @media (max-width: 560px) {
-          .match-row__teams {
-            grid-template-columns: 1fr;
-            gap: 8px;
-          }
-          .match-row__vs {
-            text-align: left;
-          }
-        }
-      `}</style>
     </li>
   );
 }
@@ -199,44 +116,6 @@ function TeamSide({ team, won, side }) {
           </span>
         ))}
       </div>
-
-      <style>{`
-        .team-side {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          padding: 8px 10px;
-          border-radius: var(--radius-md);
-          border: 1.5px solid transparent;
-        }
-        .team-side[data-team='a'] { border-color: var(--team-a-dim); }
-        .team-side[data-team='b'] { border-color: var(--team-b-dim); }
-        .team-side[data-won][data-team='a'] {
-          border-color: var(--team-a);
-          background: rgba(94, 200, 194, 0.08);
-        }
-        .team-side[data-won][data-team='b'] {
-          border-color: var(--team-b);
-          background: rgba(232, 147, 90, 0.08);
-        }
-        .team-side__names {
-          font-size: 13px;
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .team-side__crown {
-          font-size: 12px;
-        }
-        .team-side__elos {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          font-size: 11px;
-          color: var(--text-muted);
-        }
-      `}</style>
     </div>
   );
 }

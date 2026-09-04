@@ -176,20 +176,6 @@ export default function HistoryPage({ players }) {
           )}
         </>
       )}
-
-      <style>{`
-        .history-page__header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
-        .history-page__controls { display: flex; gap: 10px; }
-        .history-page__toggle { display: flex; background: var(--surface-raised); border-radius: var(--radius-sm); padding: 2px; }
-        .history-page__toggle button { background: transparent; border: none; color: var(--text-muted); font-size: 12px; padding: 7px 12px; border-radius: 5px; }
-        .history-page__toggle button[data-active] { background: var(--accent); color: var(--bg); font-weight: 600; }
-        .history-page__header select { background: var(--surface-raised); color: var(--text); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; }
-        .history-page__section { margin-bottom: 28px; }
-        .history-page__section h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500; }
-        .history-page__error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--danger); border-radius: var(--radius-md); color: var(--danger); }
-        .history-page__error p { margin: 0; }
-        .history-page__error button { flex-shrink: 0; padding: 8px 12px; border: 1px solid var(--danger); border-radius: var(--radius-sm); background: transparent; color: var(--danger); }
-      `}</style>
     </div>
   );
 }

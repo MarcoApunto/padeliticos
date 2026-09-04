@@ -36,45 +36,6 @@ export default function PlayerCard({ player, selected, onSelect, dimmed }) {
       <span className="player-card__elo numeric">
         {player.currentElo.toFixed(2)}
       </span>
-
-      <style>{`
-        .player-card {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          width: 100%;
-          padding: 10px 14px;
-          background: var(--surface-raised);
-          border: 1px solid rgba(237, 235, 222, 0.12);
-          border-radius: var(--radius-md);
-          color: var(--text);
-          text-align: left;
-          touch-action: none;
-        }
-        .player-card:hover {
-          border-color: rgba(237, 235, 222, 0.28);
-        }
-        .player-card[data-selected] {
-          border-color: var(--accent);
-          box-shadow: 0 0 0 1px var(--accent);
-        }
-        .player-card[data-dragging] {
-          opacity: 0.4;
-        }
-        .player-card[data-dimmed] {
-          opacity: 0.35;
-          pointer-events: none;
-        }
-        .player-card__name {
-          font-weight: 500;
-          font-size: 14px;
-        }
-        .player-card__elo {
-          font-size: 13px;
-          color: var(--accent);
-        }
-      `}</style>
     </button>
   );
 }

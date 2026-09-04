@@ -110,42 +110,6 @@ export default function App() {
       )}
 
       {toast && <div className="toast">{toast}</div>}
-
-      <style>{`
-        .toast {
-          position: fixed;
-          bottom: 24px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: var(--accent);
-          color: var(--bg);
-          padding: 12px 20px;
-          border-radius: var(--radius-md);
-          font-size: 13px;
-          font-weight: 600;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        }
-        .app-error {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 14px 16px;
-          background: var(--surface);
-          border: 1px solid var(--danger);
-          border-radius: var(--radius-md);
-          color: var(--danger);
-        }
-        .app-error p { margin: 0; }
-        .app-error button {
-          flex-shrink: 0;
-          padding: 8px 12px;
-          border: 1px solid var(--danger);
-          border-radius: var(--radius-sm);
-          background: transparent;
-          color: var(--danger);
-        }
-      `}</style>
     </div>
   );
 }

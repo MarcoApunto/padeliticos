@@ -34,12 +34,6 @@ export default function PlayersPage({ players, onChange }) {
     onChange(players.map((p) => (p._id === updated._id ? updated : p)));
   }
 
-  async function handleDelete(player) {
-    if (!confirm(`¿Desactivar a ${player.name}? Se conservará su historial.`)) return;
-    const updated = await api.deletePlayer(player._id);
-    onChange(players.map((p) => (p._id === updated._id ? updated : p)));
-  }
-
   return (
     <div className="players-page">
       <h2>Jugadores</h2>
@@ -75,13 +69,6 @@ export default function PlayersPage({ players, onChange }) {
             </span>
             <button type="button" onClick={() => handleToggleActive(p)}>
               {p.active ? 'Desactivar' : 'Activar'}
-            </button>
-            <button
-              type="button"
-              className="players-page__delete"
-              onClick={() => handleDelete(p)}
-            >
-              Eliminar
             </button>
           </li>
         ))}
@@ -154,10 +141,6 @@ export default function PlayersPage({ players, onChange }) {
           color: var(--text-muted);
           font-size: 12px;
           padding: 6px 10px;
-        }
-        .players-page__delete:hover {
-          border-color: var(--danger);
-          color: var(--danger);
         }
       `}</style>
     </div>

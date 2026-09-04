@@ -297,22 +297,38 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
         {!roundId && <p className="admin-page__note">Selecciona una ronda para ver sus partidos.</p>}
         {roundId && matches.length === 0 && <p className="admin-page__note">Esta ronda no tiene partidos.</p>}
         {matches.map((match) => (
-          <div className="admin-row" key={match._id}>
-            {!match.winner ? (
-              <>
-                <label className="admin-field admin-field--number">
-                  <span>Número de partido</span>
-                  <input type="number" min="1" value={matchDrafts[match._id]?.number ?? ''} onChange={(event) => updateDraft(setMatchDrafts, match._id, 'number', event.target.value)} />
-                </label>
-                <span className="admin-page__note">Pendiente</span>
-                <button type="button" disabled={saving === `match-${match._id}`} onClick={() => saveMatch(match)}>Guardar</button>
-              </>
-            ) : (
-              <span>Partido {match.number} · Jugado</span>
-            )}
-            <button type="button" className="admin-danger" disabled={saving === `match-${match._id}`} onClick={() => deleteMatch(match)}>
-              {match.winner ? 'Borrar y recalcular' : 'Borrar'}
-            </button>
+          <div className="admin-match-card" key={match._id} data-played={match.winner || undefined}>
+            <div className="admin-match-card__topline">
+              <strong className="admin-match-card__number">Partido {match.number}</strong>
+              <span className="admin-match-card__status">
+                {match.winner ? `Ganó el equipo ${match.winner === 1 ? 'A' : 'B'}` : 'Pendiente'}
+              </span>
+            </div>
+            <div className="admin-match-card__teams">
+              <div className="admin-match-card__team" data-team="a" data-winner={match.winner === 1 || undefined}>
+                <span className="admin-match-card__team-label">Equipo A</span>
+                <span>{match.teamA.players.map((player) => player.name).join(' + ')}</span>
+              </div>
+              <span className="admin-match-card__vs">vs</span>
+              <div className="admin-match-card__team" data-team="b" data-winner={match.winner === 2 || undefined}>
+                <span className="admin-match-card__team-label">Equipo B</span>
+                <span>{match.teamB.players.map((player) => player.name).join(' + ')}</span>
+              </div>
+            </div>
+            <div className="admin-match-card__actions">
+              {!match.winner && (
+                <>
+                  <label className="admin-match-card__number-edit">
+                    Nº
+                    <input type="number" min="1" value={matchDrafts[match._id]?.number ?? ''} onChange={(event) => updateDraft(setMatchDrafts, match._id, 'number', event.target.value)} />
+                  </label>
+                  <button type="button" disabled={saving === `match-${match._id}`} onClick={() => saveMatch(match)}>Guardar número</button>
+                </>
+              )}
+              <button type="button" className="admin-danger" disabled={saving === `match-${match._id}`} onClick={() => deleteMatch(match)}>
+                {match.winner ? 'Borrar y recalcular' : 'Borrar partido'}
+              </button>
+            </div>
           </div>
         ))}
         {matches.some((match) => match.winner) && <p className="admin-page__note">Borrar un partido jugado reconstruye el Elo y el historial posteriores.</p>}
@@ -346,6 +362,23 @@ function AdminStyles() {
     .admin-page__error { margin: 0; padding: 10px 12px; color: var(--danger); border: 1px solid var(--danger); border-radius: var(--radius-sm); }
     .admin-page__message { margin: 0; padding: 10px 12px; color: var(--team-a); border: 1px solid var(--team-a); border-radius: var(--radius-sm); }
     .admin-page__note { color: var(--text-muted); font-size: 12px; margin: 0; }
+    .admin-match-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface-raised); border: 1px solid rgba(237, 235, 222, 0.1); border-left: 3px solid var(--accent); border-radius: var(--radius-md); }
+    .admin-match-card[data-played] { border-left-color: var(--team-a); }
+    .admin-match-card__topline, .admin-match-card__actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .admin-match-card__number { color: var(--accent); font-size: 14px; }
+    .admin-match-card__status { color: var(--text-muted); font-size: 12px; }
+    .admin-match-card__teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+    .admin-match-card__team { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 9px 10px; border: 1px solid var(--team-a-dim); border-radius: var(--radius-sm); }
+    .admin-match-card__team[data-team='b'] { border-color: var(--team-b-dim); }
+    .admin-match-card__team[data-winner] { background: rgba(94, 200, 194, 0.1); }
+    .admin-match-card__team[data-team='b'][data-winner] { background: rgba(232, 147, 90, 0.1); }
+    .admin-match-card__team > span:last-child { overflow-wrap: anywhere; font-size: 13px; }
+    .admin-match-card__team-label { color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
+    .admin-match-card__vs { color: var(--text-muted); font-size: 12px; }
+    .admin-match-card__actions { justify-content: flex-end; }
+    .admin-match-card__number-edit { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 11px; }
+    .admin-match-card__number-edit input { width: 62px; padding: 7px 8px; background: var(--surface); color: var(--text); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); }
     @media (max-width: 560px) { .admin-row input { width: 100%; } .admin-row input:first-child { flex: auto; } }
+    @media (max-width: 560px) { .admin-match-card__teams { grid-template-columns: 1fr; } .admin-match-card__vs { text-align: center; } .admin-match-card__actions { justify-content: flex-start; } }
   `}</style>;
 }

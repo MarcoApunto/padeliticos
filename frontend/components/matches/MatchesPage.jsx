@@ -6,18 +6,28 @@ export default function MatchesPage() {
   const [seasonId, setSeasonId] = useState('');
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
-    api.getSeasons().then(setSeasons);
-  }, []);
+    setError(null);
+    api.getSeasons().then(setSeasons).catch((err) => {
+      setError(err.message || 'No se pudieron cargar las temporadas');
+    });
+  }, [retryKey]);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     api
       .getAllMatches(seasonId ? { seasonId } : {})
       .then(setMatches)
+      .catch((err) => {
+        setMatches([]);
+        setError(err.message || 'No se pudieron cargar los partidos');
+      })
       .finally(() => setLoading(false));
-  }, [seasonId]);
+  }, [seasonId, retryKey]);
 
   return (
     <div className="matches-page">
@@ -35,11 +45,20 @@ export default function MatchesPage() {
 
       {loading && <p className="text-muted">Cargando partidos…</p>}
 
-      {!loading && matches.length === 0 && (
+      {!loading && error && (
+        <div className="matches-page__error" role="alert">
+          <p>{error}</p>
+          <button type="button" onClick={() => setRetryKey((key) => key + 1)}>
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && matches.length === 0 && (
         <p className="text-muted">Todavía no se ha jugado ningún partido.</p>
       )}
 
-      {!loading && matches.length > 0 && (
+      {!loading && !error && matches.length > 0 && (
         <ul className="matches-page__list">
           {matches.map((match) => (
             <MatchRow key={match._id} match={match} />
@@ -52,9 +71,12 @@ export default function MatchesPage() {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
           margin-bottom: 20px;
         }
         .matches-page__header select {
+          min-width: 0;
           background: var(--surface-raised);
           color: var(--text);
           border: 1px solid rgba(237, 235, 222, 0.15);
@@ -69,6 +91,26 @@ export default function MatchesPage() {
           display: flex;
           flex-direction: column;
           gap: 10px;
+        }
+        .matches-page__error {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 14px 16px;
+          background: var(--surface);
+          border: 1px solid var(--danger);
+          border-radius: var(--radius-md);
+          color: var(--danger);
+        }
+        .matches-page__error p { margin: 0; }
+        .matches-page__error button {
+          flex-shrink: 0;
+          padding: 8px 12px;
+          border: 1px solid var(--danger);
+          border-radius: var(--radius-sm);
+          background: transparent;
+          color: var(--danger);
         }
       `}</style>
     </div>

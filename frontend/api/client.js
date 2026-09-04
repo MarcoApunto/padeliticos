@@ -61,4 +61,43 @@ export const api = {
       body: JSON.stringify(data),
     }),
   deleteMatch: (id) => request(`/matches/${id}`, { method: 'DELETE' }),
+
+  admin: {
+    check: (key) => adminRequest('/admin/check', key),
+    updatePlayer: (key, id, data) =>
+      adminRequest(`/admin/players/${id}`, key, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    disablePlayer: (key, id) =>
+      adminRequest(`/admin/players/${id}`, key, { method: 'DELETE' }),
+    updateSeason: (key, id, data) =>
+      adminRequest(`/admin/seasons/${id}`, key, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deleteSeason: (key, id) =>
+      adminRequest(`/admin/seasons/${id}`, key, { method: 'DELETE' }),
+    updateRound: (key, id, data) =>
+      adminRequest(`/admin/rounds/${id}`, key, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deleteRound: (key, id) =>
+      adminRequest(`/admin/rounds/${id}`, key, { method: 'DELETE' }),
+    deleteMatch: (key, id) =>
+      adminRequest(`/admin/matches/${id}`, key, { method: 'DELETE' }),
+    updateMatch: (key, id, data) =>
+      adminRequest(`/admin/matches/${id}`, key, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+  },
 };
+
+function adminRequest(path, key, options = {}) {
+  return request(path, {
+    ...options,
+    headers: { ...options.headers, 'x-admin-key': key },
+  });
+}

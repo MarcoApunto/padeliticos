@@ -17,6 +17,7 @@
 
 const ELO_MIN = 0.5;
 const ELO_MAX = 7;
+const ELO_K_FACTOR = 0.5;
 
 /**
  * Recorta un valor de elo al rango permitido [ELO_MIN, ELO_MAX].
@@ -148,6 +149,7 @@ function computeFinalElos(
 export {
   ELO_MIN,
   ELO_MAX,
+  ELO_K_FACTOR,
   clampElo,
   winProbabilityForPlayer,
   teamWinProbability,

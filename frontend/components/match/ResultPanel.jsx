@@ -166,6 +166,7 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
         .result-panel__notes-row {
           display: flex;
           gap: 14px;
+          flex-wrap: wrap;
           margin-top: 10px;
         }
         .result-panel__notes-row label {

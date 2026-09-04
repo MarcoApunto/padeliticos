@@ -4,7 +4,7 @@ import Round from '../models/Round.js';
 import Season from '../models/Season.js';
 import Player from '../models/Player.js';
 import EloHistory from '../models/EloHistory.js';
-import { computePreMatch, computeFinalElos } from '../services/eloService.js';
+import { computePreMatch, computeFinalElos, ELO_K_FACTOR } from '../services/eloService.js';
 
 // GET /api/rounds/:roundId/matches
 export const getAllForRound = async (req, res) => {
@@ -125,7 +125,7 @@ export const setResult = async (req, res) => {
         match.teamA.eloBefore,
         match.teamB.eloBefore,
         winner,
-        season.kFactor,
+        ELO_K_FACTOR,
         teamANotes,
         teamBNotes
       );

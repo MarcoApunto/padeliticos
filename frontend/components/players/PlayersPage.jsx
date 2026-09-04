@@ -118,6 +118,7 @@ export default function PlayersPage({ players, onChange }) {
           display: flex;
           align-items: center;
           gap: 10px;
+          flex-wrap: wrap;
           padding: 10px 14px;
           background: var(--surface);
           border-radius: var(--radius-md);
@@ -127,6 +128,7 @@ export default function PlayersPage({ players, onChange }) {
         }
         .players-page__name {
           flex: 1;
+          min-width: 100px;
           font-size: 14px;
         }
         .players-page__elo {
@@ -141,6 +143,7 @@ export default function PlayersPage({ players, onChange }) {
           color: var(--text-muted);
           font-size: 12px;
           padding: 6px 10px;
+          white-space: nowrap;
         }
       `}</style>
     </div>

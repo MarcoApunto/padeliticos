@@ -3,8 +3,8 @@ import React from 'react';
 const TABS = [
   { id: 'match', label: 'Nuevo partido' },
   { id: 'ranking', label: 'Ranking' },
-  { id: 'history', label: 'Historial' },
   { id: 'matches', label: 'Partidos' },
+  { id: 'history', label: 'Historial' },
   { id: 'players', label: 'Jugadores' },
 ];
 
@@ -48,6 +48,12 @@ export default function Header({ active, onChange }) {
         .header nav {
           display: flex;
           gap: 6px;
+          max-width: 100%;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+        .header nav::-webkit-scrollbar {
+          display: none;
         }
         .header nav button {
           background: transparent;
@@ -56,10 +62,26 @@ export default function Header({ active, onChange }) {
           padding: 8px 14px;
           font-size: 13px;
           color: var(--text-muted);
+          white-space: nowrap;
+          flex-shrink: 0;
         }
         .header nav button[data-active] {
           background: var(--surface-raised);
           color: var(--accent);
+        }
+        @media (max-width: 480px) {
+          .header {
+            gap: 12px;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+          }
+          .header nav {
+            width: 100%;
+          }
+          .header nav button {
+            padding: 7px 10px;
+            font-size: 12px;
+          }
         }
       `}</style>
     </header>

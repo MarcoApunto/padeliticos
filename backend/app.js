@@ -7,6 +7,7 @@ import playersRouter from './routes/players.js';
 import seasonsRouter from './routes/seasons.js';
 import roundsRouter from './routes/rounds.js';
 import matchesRouter from './routes/matches.js';
+import adminRouter from './routes/admin.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use('/api/players', playersRouter);
 app.use('/api/seasons', seasonsRouter);
 app.use('/api/rounds', roundsRouter);
 app.use('/api/matches', matchesRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

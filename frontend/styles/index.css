@@ -64,10 +64,22 @@ a {
   color: inherit;
 }
 
+input,
+select,
+button {
+  max-width: 100%;
+}
+
 .app-shell {
   max-width: 1040px;
   margin: 0 auto;
   padding: 24px 20px 80px;
+}
+
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 16px 14px 64px;
+  }
 }
 
 .numeric {

@@ -4,6 +4,7 @@
 
 export const ELO_MIN = 0.5;
 export const ELO_MAX = 7;
+export const ELO_K_FACTOR = 0.5;
 
 export function clampElo(elo) {
   return Math.min(ELO_MAX, Math.max(ELO_MIN, elo));

@@ -40,8 +40,12 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
     if (!seasonId || !unlocked) {
       setRounds([]);
       setRoundId('');
+      setMatches([]);
       return;
     }
+    setRounds([]);
+    setRoundId('');
+    setMatches([]);
     api.getRounds(seasonId).then((data) => {
       setRounds(data);
       if (data[0]) setRoundId(data[0]._id);
@@ -272,6 +276,10 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
         <select value={seasonId} onChange={(event) => setSeasonId(event.target.value)}>
           <option value="">Selecciona una temporada</option>
           {seasons.map((season) => <option key={season._id} value={season._id}>{season.name}</option>)}
+        </select>
+        <select value={roundId} onChange={(event) => setRoundId(event.target.value)} disabled={!seasonId || rounds.length === 0}>
+          <option value="">Selecciona una ronda</option>
+          {rounds.map((round) => <option key={round._id} value={round._id}>Ronda {round.number}</option>)}
         </select>
         {rounds.map((round) => {
           const draft = roundDrafts[round._id] || {};

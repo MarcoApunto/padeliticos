@@ -12,7 +12,7 @@ router.put('/seasons/:id', ctrl.updateSeason);
 router.delete('/seasons/:id', ctrl.removeSeason);
 router.put('/rounds/:id', ctrl.updateRound);
 router.delete('/rounds/:id', ctrl.removeRound);
-router.delete('/matches/:id', ctrl.removePendingMatch);
+router.delete('/matches/:id', ctrl.removeMatch);
 router.put('/matches/:id', ctrl.updatePendingMatch);
 
 export default router;

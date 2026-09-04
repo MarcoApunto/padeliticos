@@ -55,6 +55,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateMatch: (matchId, data) =>
+    request(`/matches/${matchId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  updateMatchResult: (matchId, data) =>
+    request(`/matches/${matchId}/result`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   setMatchResult: (matchId, data) =>
     request(`/matches/${matchId}/result`, {
       method: 'PATCH',

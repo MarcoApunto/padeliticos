@@ -178,13 +178,15 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
   }
 
   async function deleteMatch(match) {
-    if (match.winner) return;
-    if (!window.confirm(`¿Borrar el partido pendiente ${match.number}?`)) return;
+    const confirmation = match.winner
+      ? `¿Borrar el partido jugado ${match.number}? Se recalculará el Elo posterior.`
+      : `¿Borrar el partido pendiente ${match.number}?`;
+    if (!window.confirm(confirmation)) return;
     setSaving(`match-${match._id}`);
     try {
       await api.admin.deleteMatch(adminKey, match._id);
       setMatches((items) => items.filter((item) => item._id !== match._id));
-      setMessage('Partido pendiente borrado');
+      setMessage(match.winner ? 'Partido borrado y Elo recalculado' : 'Partido pendiente borrado');
     } catch (err) {
       showError(err);
     } finally {
@@ -283,21 +285,29 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
       </section>
 
       <section className="admin-section">
-        <h3>Partidos pendientes</h3>
+        <h3>Partidos</h3>
         {!roundId && <p className="admin-page__note">Selecciona una ronda para ver sus partidos.</p>}
         {roundId && matches.length === 0 && <p className="admin-page__note">Esta ronda no tiene partidos.</p>}
-        {matches.filter((match) => !match.winner).map((match) => (
+        {matches.map((match) => (
           <div className="admin-row" key={match._id}>
-            <label className="admin-field admin-field--number">
-              <span>Número de partido</span>
-              <input type="number" min="1" value={matchDrafts[match._id]?.number ?? ''} onChange={(event) => updateDraft(setMatchDrafts, match._id, 'number', event.target.value)} />
-            </label>
-            <span className="admin-page__note">Pendiente</span>
-            <button type="button" disabled={saving === `match-${match._id}`} onClick={() => saveMatch(match)}>Guardar</button>
-            <button type="button" className="admin-danger" disabled={saving === `match-${match._id}`} onClick={() => deleteMatch(match)}>Borrar</button>
+            {!match.winner ? (
+              <>
+                <label className="admin-field admin-field--number">
+                  <span>Número de partido</span>
+                  <input type="number" min="1" value={matchDrafts[match._id]?.number ?? ''} onChange={(event) => updateDraft(setMatchDrafts, match._id, 'number', event.target.value)} />
+                </label>
+                <span className="admin-page__note">Pendiente</span>
+                <button type="button" disabled={saving === `match-${match._id}`} onClick={() => saveMatch(match)}>Guardar</button>
+              </>
+            ) : (
+              <span>Partido {match.number} · Jugado</span>
+            )}
+            <button type="button" className="admin-danger" disabled={saving === `match-${match._id}`} onClick={() => deleteMatch(match)}>
+              {match.winner ? 'Borrar y recalcular' : 'Borrar'}
+            </button>
           </div>
         ))}
-        {matches.some((match) => match.winner) && <p className="admin-page__note">Los partidos ya jugados no se pueden borrar.</p>}
+        {matches.some((match) => match.winner) && <p className="admin-page__note">Borrar un partido jugado reconstruye el Elo y el historial posteriores.</p>}
       </section>
 
       <p className="admin-page__note">Los borrados de temporadas y rondas solo se permiten si están vacías. Los jugadores se dan de baja para conservar su historial.</p>

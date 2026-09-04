@@ -21,6 +21,9 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
   const [slots, setSlots] = useState(emptySlots);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [match, setMatch] = useState(null); // partido ya creado en backend
+  const [editingMatchId, setEditingMatchId] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [matchesLoading, setMatchesLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [savingResult, setSavingResult] = useState(false);
   const [error, setError] = useState(null);
@@ -35,6 +38,33 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
     setNextMatchNumber((round.matchCount || 0) + 1);
   }, [round._id, round.matchCount]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setMatch(null);
+    setSlots(emptySlots());
+    setMatchesLoading(true);
+    api
+      .getMatches(round._id)
+      .then((data) => {
+        if (cancelled) return;
+        setMatches(data);
+        const highestNumber = data.reduce(
+          (highest, item) => Math.max(highest, item.number || 0),
+          0
+        );
+        setNextMatchNumber(highestNumber + 1);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'No se pudieron cargar los partidos');
+      })
+      .finally(() => {
+        if (!cancelled) setMatchesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [round._id]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
@@ -43,6 +73,18 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
     () => new Set(Object.values(slots).filter(Boolean)),
     [slots]
   );
+
+  const reservedPlayerIds = useMemo(() => {
+    const ids = new Set();
+    matches
+      .filter((item) => item._id !== editingMatchId)
+      .forEach((item) => {
+        [...item.teamA.players, ...item.teamB.players].forEach((player) => {
+          ids.add(typeof player === 'string' ? player : player._id);
+        });
+      });
+    return ids;
+  }, [matches, editingMatchId]);
 
   const playersById = useMemo(
     () => Object.fromEntries(players.map((p) => [p._id, p])),
@@ -100,27 +142,42 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
   function resetCourt() {
     setSlots(emptySlots());
     setMatch(null);
+    setEditingMatchId(null);
     setError(null);
   }
 
-  async function handleCreateMatch() {
+  function startEditingMatch(selectedMatch) {
+    setEditingMatchId(selectedMatch._id);
+    setSelectedPlayerId(null);
+    setError(null);
+    setSlots({
+      'a-0': selectedMatch.teamA.players[0]._id,
+      'a-1': selectedMatch.teamA.players[1]._id,
+      'b-0': selectedMatch.teamB.players[0]._id,
+      'b-1': selectedMatch.teamB.players[1]._id,
+    });
+  }
+
+  async function handleSaveMatch() {
     setCreating(true);
     setError(null);
     try {
-      const created = await api.createMatch(round._id, {
-        number: nextMatchNumber,
+      const editingMatch = matches.find((item) => item._id === editingMatchId);
+      const payload = {
+        number: editingMatch ? editingMatch.number : nextMatchNumber,
         teamA: { players: [slots['a-0'], slots['a-1']] },
         teamB: { players: [slots['b-0'], slots['b-1']] },
-      });
-      setNextMatchNumber((n) => n + 1);
-      // Enriquecemos con los datos de jugador para mostrar nombres en ResultPanel
-      created.teamA.players = created.teamA.players.map(
-        (id) => playersById[id] || { _id: id, name: '…' }
-      );
-      created.teamB.players = created.teamB.players.map(
-        (id) => playersById[id] || { _id: id, name: '…' }
-      );
-      setMatch(created);
+      };
+      if (editingMatchId) {
+        await api.updateMatch(editingMatchId, payload);
+      } else {
+        await api.createMatch(round._id, payload);
+        setNextMatchNumber((n) => n + 1);
+      }
+      setSlots(emptySlots());
+      const updatedMatches = await api.getMatches(round._id);
+      setMatches(updatedMatches);
+      setEditingMatchId(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -132,9 +189,13 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
     setSavingResult(true);
     setError(null);
     try {
-      const closed = await api.setMatchResult(match._id, payload);
+      const closed = match.winner
+        ? await api.updateMatchResult(match._id, payload)
+        : await api.setMatchResult(match._id, payload);
       onMatchClosed?.(closed);
       resetCourt();
+      const updatedMatches = await api.getMatches(round._id);
+      setMatches(updatedMatches);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -142,11 +203,14 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
     }
   }
 
-  const availablePlayers = players.filter((p) => !usedPlayerIds.has(p._id));
+  const availablePlayers = players.filter(
+    (player) => !usedPlayerIds.has(player._id) && !reservedPlayerIds.has(player._id)
+  );
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="court-builder">
+        {!match && <>
         <div className="court">
           <div className="court__side" data-team="a">
             <span className="court__label" data-team="a">
@@ -196,20 +260,25 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
             type="button"
             className="court-builder__create"
             disabled={!isComplete || creating}
-            onClick={handleCreateMatch}
+            onClick={handleSaveMatch}
           >
-            {creating ? 'Creando partido…' : 'Crear partido con estas parejas'}
+            {creating
+              ? editingMatchId ? 'Guardando cambios…' : 'Creando partido…'
+              : editingMatchId ? 'Guardar cambios del partido' : 'Crear partido con estas parejas'}
+          </button>
+        )}
+        {!match && editingMatchId && (
+          <button type="button" className="court-builder__back" onClick={resetCourt}>
+            Cancelar edición
           </button>
         )}
 
-        {error && <p className="court-builder__error">{error}</p>}
-
-        {match && (
-          <ResultPanel
-            match={match}
-            kFactor={kFactor}
-            onConfirm={handleConfirmResult}
-            saving={savingResult}
+        {!match && !editingMatchId && (
+          <RoundMatches
+            matches={matches}
+            loading={matchesLoading}
+            onSelect={setMatch}
+            onEdit={startEditingMatch}
           />
         )}
 
@@ -233,6 +302,25 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
             </div>
           </div>
         )}
+        </>}
+
+        {error && <p className="court-builder__error">{error}</p>}
+
+        {match && (
+          <>
+            <button type="button" className="court-builder__back" onClick={() => setMatch(null)}>
+              Volver a los partidos de la ronda
+            </button>
+          <ResultPanel
+            key={`${match._id}-${match.winner || 'pending'}`}
+            match={match}
+            kFactor={kFactor}
+            onConfirm={handleConfirmResult}
+            saving={savingResult}
+          />
+          </>
+        )}
+
       </div>
 
       <style>{`
@@ -287,6 +375,14 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
           color: var(--danger);
           font-size: 13px;
         }
+        .court-builder__back {
+          align-self: flex-start;
+          padding: 8px 12px;
+          border: 1px solid rgba(237, 235, 222, 0.2);
+          border-radius: var(--radius-sm);
+          background: transparent;
+          color: var(--text-muted);
+        }
         .bench {
           display: flex;
           flex-direction: column;
@@ -308,5 +404,108 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
         }
       `}</style>
     </DndContext>
+  );
+}
+
+function RoundMatches({ matches, loading, onSelect, onEdit }) {
+  return (
+    <section className="round-matches">
+      <div className="round-matches__header">
+        <h3>Partidos de esta ronda</h3>
+        {loading && <span className="text-muted">Cargando…</span>}
+      </div>
+      {!loading && matches.length === 0 && (
+        <p className="text-muted">Todavía no hay partidos creados en esta ronda.</p>
+      )}
+      {!loading && matches.length > 0 && (
+        <div className="round-matches__list">
+          {matches.map((match) => {
+            const pending = !match.winner;
+            return (
+              <div className="round-match" key={match._id} data-pending={pending || undefined}>
+                <div>
+                  <strong>Partido {match.number}</strong>
+                  <span>
+                    {match.teamA.players.map((player) => player.name).join(' + ')}
+                    {' vs '}
+                    {match.teamB.players.map((player) => player.name).join(' + ')}
+                  </span>
+                </div>
+                {pending ? (
+                  <div className="round-match__actions">
+                    <button type="button" onClick={() => onEdit(match)}>
+                      Editar
+                    </button>
+                    <button type="button" onClick={() => onSelect(match)}>
+                      Añadir resultado
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => onSelect(match)}>
+                    Editar resultado
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <style>{`
+        .round-matches {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .round-matches__header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .round-matches__header h3 {
+          font-size: 14px;
+          color: var(--text-muted);
+          font-weight: 500;
+        }
+        .round-matches__list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .round-match {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 14px;
+          background: var(--surface);
+          border-radius: var(--radius-md);
+          border-left: 3px solid var(--surface-raised);
+        }
+        .round-match[data-pending] { border-left-color: var(--accent); }
+        .round-match > div {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+        .round-match strong { font-size: 12px; color: var(--accent); }
+        .round-match span { font-size: 13px; overflow-wrap: anywhere; }
+        .round-match button {
+          flex-shrink: 0;
+          padding: 8px 10px;
+          border: 1px solid var(--accent);
+          border-radius: var(--radius-sm);
+          background: transparent;
+          color: var(--accent);
+          font-size: 12px;
+        }
+        .round-match__actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .round-match__status { color: var(--text-muted); font-size: 12px !important; }
+        @media (max-width: 560px) {
+          .round-match { align-items: flex-start; flex-direction: column; }
+        }
+      `}</style>
+    </section>
   );
 }

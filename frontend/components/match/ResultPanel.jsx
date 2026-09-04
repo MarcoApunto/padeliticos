@@ -7,10 +7,10 @@ import { previewFinalElo } from '../../utils/elo.js';
 // vía PATCH /matches/:id/result, que es donde el servidor calcula y persiste
 // el elo final de verdad.
 export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
-  const [winner, setWinner] = useState(null);
+  const [winner, setWinner] = useState(match.winner || null);
   const [notes, setNotes] = useState({
-    a: [undefined, undefined],
-    b: [undefined, undefined],
+    a: match.teamA.notes || [undefined, undefined],
+    b: match.teamB.notes || [undefined, undefined],
   });
 
   const teamAElos = match.teamA.eloBefore;
@@ -41,7 +41,7 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
 
   return (
     <div className="result-panel">
-      <h3>¿Quién ganó?</h3>
+      <h3>{match.winner ? 'Editar resultado' : '¿Quién ganó?'}</h3>
       <div className="result-panel__teams">
         {['a', 'b'].map((team) => {
           const teamData = team === 'a' ? match.teamA : match.teamB;
@@ -107,7 +107,7 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
           })
         }
       >
-        {saving ? 'Guardando…' : 'Confirmar resultado'}
+        {saving ? 'Guardando…' : match.winner ? 'Guardar cambios' : 'Confirmar resultado'}
       </button>
 
       <style>{`

@@ -2,6 +2,7 @@ import Match from '../models/Match.js';
 import Player from '../models/Player.js';
 import Round from '../models/Round.js';
 import Season from '../models/Season.js';
+import { rebuildRatings } from '../services/ratingService.js';
 
 export const check = (req, res) => res.json({ ok: true });
 
@@ -86,15 +87,13 @@ export const removeRound = async (req, res) => {
   res.status(204).send();
 };
 
-export const removePendingMatch = async (req, res) => {
+export const removeMatch = async (req, res) => {
   const match = await Match.findById(req.params.id);
   if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
-  if (match.winner) {
-    return res.status(409).json({
-      error: 'Solo se pueden borrar partidos sin resultado',
-    });
-  }
+  const hadResult = Boolean(match.winner);
+  const removedId = match._id;
   await match.deleteOne();
+  if (hadResult) await rebuildRatings([removedId]);
   res.status(204).send();
 };
 

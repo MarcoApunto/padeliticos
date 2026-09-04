@@ -36,26 +36,37 @@ export default function SeasonRoundPicker({ onRoundReady }) {
 
   useEffect(() => {
     if (!seasonId) return;
+    let cancelled = false;
+    setRounds([]);
+    setRoundId('');
+    onRoundReady(null);
     setError(null);
     api
       .getRounds(seasonId)
       .then((data) => {
+        if (cancelled) return;
         setRounds(data);
         setRoundId(data[0]?._id || '');
       })
       .catch((err) => {
+        if (cancelled) return;
         setRounds([]);
         setRoundId('');
         onRoundReady(null);
         setError(err.message || 'No se pudieron cargar las rondas');
       });
+    return () => {
+      cancelled = true;
+    };
   }, [seasonId, retryKey, onRoundReady]);
 
   useEffect(() => {
     if (!roundId) return onRoundReady(null);
+    let cancelled = false;
     api
       .getMatches(roundId)
       .then((matches) => {
+        if (cancelled) return;
         const round = rounds.find((r) => r._id === roundId);
         onRoundReady({
           ...round,
@@ -64,9 +75,13 @@ export default function SeasonRoundPicker({ onRoundReady }) {
         });
       })
       .catch((err) => {
+        if (cancelled) return;
         onRoundReady(null);
         setError(err.message || 'No se pudieron cargar los partidos');
       });
+    return () => {
+      cancelled = true;
+    };
   }, [roundId, retryKey, rounds, seasons, seasonId, onRoundReady]);
 
   async function createSeason() {
@@ -131,7 +146,15 @@ export default function SeasonRoundPicker({ onRoundReady }) {
       <div className="picker__group">
         <label>Temporada</label>
         <div className="picker__row">
-          <select value={seasonId} onChange={(e) => setSeasonId(e.target.value)}>
+          <select
+            value={seasonId}
+            onChange={(event) => {
+              setSeasonId(event.target.value);
+              setRounds([]);
+              setRoundId('');
+              onRoundReady(null);
+            }}
+          >
             {seasons.length === 0 && <option value="">Sin temporadas</option>}
             {seasons.map((s) => (
               <option key={s._id} value={s._id}>

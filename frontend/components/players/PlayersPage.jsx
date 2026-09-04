@@ -35,9 +35,9 @@ export default function PlayersPage({ players, onChange }) {
   }
 
   async function handleDelete(player) {
-    if (!confirm(`¿Eliminar a ${player.name}?`)) return;
-    await api.deletePlayer(player._id);
-    onChange(players.filter((p) => p._id !== player._id));
+    if (!confirm(`¿Desactivar a ${player.name}? Se conservará su historial.`)) return;
+    const updated = await api.deletePlayer(player._id);
+    onChange(players.map((p) => (p._id === updated._id ? updated : p)));
   }
 
   return (

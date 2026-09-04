@@ -50,11 +50,15 @@ export const update = async (req, res) => {
   res.json(player);
 };
 
-// DELETE /api/players/:id
+// DELETE /api/players/:id — baja lógica para conservar historial y referencias
 export const remove = async (req, res) => {
-  const player = await Player.findByIdAndDelete(req.params.id);
+  const player = await Player.findByIdAndUpdate(
+    req.params.id,
+    { active: false },
+    { new: true }
+  );
   if (!player) return res.status(404).json({ error: 'Jugador no encontrado' });
-  res.status(204).send();
+  res.json(player);
 };
 
 // GET /api/players/:id/history — evolución de elo del jugador + detalle de cada partido

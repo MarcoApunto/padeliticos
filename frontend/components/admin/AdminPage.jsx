@@ -47,8 +47,9 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
     setRoundId('');
     setMatches([]);
     api.getRounds(seasonId).then((data) => {
-      setRounds(data);
-      if (data[0]) setRoundId(data[0]._id);
+      const ordered = [...data].sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0));
+      setRounds(ordered);
+      if (ordered[0]) setRoundId(ordered[0]._id);
     }).catch(showError);
   }, [seasonId, unlocked]);
 
@@ -158,7 +159,8 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
     setError(null);
     try {
       const updated = await api.admin.updateRound(adminKey, round._id, roundDrafts[round._id]);
-      setRounds((items) => items.map((item) => item._id === updated._id ? updated : item));
+      setRounds((items) => [...items.map((item) => item._id === updated._id ? updated : item)]
+        .sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0)));
       setMessage(`Ronda ${updated.number} actualizada`);
     } catch (err) {
       showError(err);
@@ -214,6 +216,20 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
     }
   }
 
+  async function rebuildAllRatings() {
+    setError(null);
+    setMessage(null);
+    setSaving('ratings-rebuild');
+    try {
+      const result = await api.admin.rebuildRatings(adminKey);
+      setMessage(result.message || 'Elo reconstruido correctamente');
+    } catch (err) {
+      showError(err);
+    } finally {
+      setSaving(null);
+    }
+  }
+
   function updateDraft(setter, id, field, value) {
     setter((drafts) => ({ ...drafts, [id]: { ...drafts[id], [field]: value } }));
   }
@@ -240,6 +256,12 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
 
       <section className="admin-section">
         <h3>Jugadores y Elo</h3>
+        <div className="admin-row">
+          <span>Estado del ranking</span>
+          <button type="button" disabled={saving === 'ratings-rebuild'} onClick={rebuildAllRatings}>
+            {saving === 'ratings-rebuild' ? 'Reconstruyendo…' : 'Reconstruir Elo'}
+          </button>
+        </div>
         {players.map((player) => {
           const draft = playerDrafts[player._id] || {};
           return <div className="admin-row" key={player._id}>

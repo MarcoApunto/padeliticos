@@ -45,8 +45,9 @@ export default function SeasonRoundPicker({ onRoundReady }) {
       .getRounds(seasonId)
       .then((data) => {
         if (cancelled) return;
-        setRounds(data);
-        setRoundId(data[0]?._id || '');
+        const ordered = [...data].sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0));
+        setRounds(ordered);
+        setRoundId(ordered[0]?._id || '');
       })
       .catch((err) => {
         if (cancelled) return;
@@ -105,10 +106,10 @@ export default function SeasonRoundPicker({ onRoundReady }) {
 
   async function createRound() {
     if (!seasonId) return;
-    const number = rounds.length + 1;
+    const nextNumber = Math.max(0, ...rounds.map((round) => Number(round.number) || 0)) + 1;
     try {
-      const round = await api.createRound(seasonId, { number });
-      setRounds((prev) => [...prev, round]);
+      const round = await api.createRound(seasonId, { number: nextNumber });
+      setRounds((prev) => [...prev, round].sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0)));
       setRoundId(round._id);
       setError(null);
       setNotice(`Ronda ${round.number} creada correctamente.`);

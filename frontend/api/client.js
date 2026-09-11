@@ -102,6 +102,8 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    rebuildRatings: (key) =>
+      adminRequest('/admin/ratings/rebuild', key, { method: 'POST' }),
   },
 };
 

@@ -1,7 +1,27 @@
 import React from 'react';
 
+function compareHistoryEntries(a, b) {
+  const aSeasonDate = new Date(
+    a.match?.round?.season?.createdAt || a.season?.createdAt || 0
+  ).getTime();
+  const bSeasonDate = new Date(
+    b.match?.round?.season?.createdAt || b.season?.createdAt || 0
+  ).getTime();
+  const aRound = Number(a.match?.round?.number || 0);
+  const bRound = Number(b.match?.round?.number || 0);
+  const aMatchNumber = Number(a.match?.number || 0);
+  const bMatchNumber = Number(b.match?.number || 0);
+  const aDate = new Date(a.match?.playedAt || a.createdAt || 0).getTime();
+  const bDate = new Date(b.match?.playedAt || b.createdAt || 0).getTime();
+
+  if (aSeasonDate !== bSeasonDate) return aSeasonDate - bSeasonDate;
+  if (aRound !== bRound) return aRound - bRound;
+  if (aMatchNumber !== bMatchNumber) return aMatchNumber - bMatchNumber;
+  return aDate - bDate;
+}
+
 export default function MatchHistoryList({ entries }) {
-  const ordered = [...entries].reverse();
+  const ordered = [...entries].sort(compareHistoryEntries);
 
   if (ordered.length === 0) {
     return <p className="text-muted">Este jugador aún no ha jugado ningún partido.</p>;

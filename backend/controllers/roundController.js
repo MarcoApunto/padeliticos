@@ -12,13 +12,15 @@ export const getAllForSeason = async (req, res) => {
 export const create = async (req, res) => {
   const { number } = req.body;
   if (!number) return res.status(400).json({ error: 'number es obligatorio' });
-  const round = await Round.create({ season: req.params.seasonId, number });
-  res.status(201).json(round);
-};
-
-// DELETE /api/rounds/:id
-export const remove = async (req, res) => {
-  const round = await Round.findByIdAndDelete(req.params.id);
-  if (!round) return res.status(404).json({ error: 'Ronda no encontrada' });
-  res.status(204).send();
+  try {
+    const round = await Round.create({ season: req.params.seasonId, number });
+    res.status(201).json(round);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res
+        .status(409)
+        .json({ error: 'Esa ronda ya existe en la temporada' });
+    }
+    throw err;
+  }
 };

@@ -28,12 +28,19 @@ export const create = async (req, res) => {
       error: `initialElo debe estar entre ${ELO_MIN} y ${ELO_MAX}`,
     });
   }
-  const player = await Player.create({
-    name,
-    initialElo,
-    currentElo: initialElo, // arranca igual que su elo inicial
-  });
-  res.status(201).json(player);
+  try {
+    const player = await Player.create({
+      name,
+      initialElo,
+      currentElo: initialElo, // arranca igual que su elo inicial
+    });
+    res.status(201).json(player);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'Ya existe un jugador con ese nombre' });
+    }
+    throw err;
+  }
 };
 
 // PUT /api/players/:id
@@ -64,21 +71,20 @@ export const remove = async (req, res) => {
 // GET /api/players/:id/history — evolución de elo del jugador + detalle de cada partido
 export const getHistory = async (req, res) => {
   const history = await EloHistory.find({ player: req.params.id })
-    .populate('season', 'name')
+    .populate('season', 'name createdAt')
     .populate({
       path: 'match',
-      select: 'number round winner playedAt teamA teamB',
+      select: 'number round winner playedAt teamA teamB score',
       populate: [
         {
           path: 'round',
           select: 'number season',
-          populate: { path: 'season', select: 'name' },
+          populate: { path: 'season', select: 'name createdAt' },
         },
         { path: 'teamA.players', select: 'name' },
         { path: 'teamB.players', select: 'name' },
       ],
-    })
-    .sort({ createdAt: 1 });
+    });
 
   const enriched = history.map((entry) => {
     const match = entry.match;
@@ -111,5 +117,112 @@ export const getHistory = async (req, res) => {
     };
   });
 
-  res.json(enriched);
+  const ordered = [...enriched].sort((a, b) => {
+    const aSeasonCreatedAt = new Date(
+      a.match?.round?.season?.createdAt || a.season?.createdAt || 0
+    ).getTime();
+    const bSeasonCreatedAt = new Date(
+      b.match?.round?.season?.createdAt || b.season?.createdAt || 0
+    ).getTime();
+    const aRound = Number(a.match?.round?.number || 0);
+    const bRound = Number(b.match?.round?.number || 0);
+    const aMatchNumber = Number(a.match?.number || 0);
+    const bMatchNumber = Number(b.match?.number || 0);
+    const aPlayedAt = new Date(a.match?.playedAt || a.createdAt || 0).getTime();
+    const bPlayedAt = new Date(b.match?.playedAt || b.createdAt || 0).getTime();
+
+    return (
+      aSeasonCreatedAt - bSeasonCreatedAt ||
+      aRound - bRound ||
+      aMatchNumber - bMatchNumber ||
+      aPlayedAt - bPlayedAt
+    );
+  });
+
+  res.json(ordered);
+};
+
+// Clave de ordenación cronológica, igual que en getHistory: temporada →
+// ronda → partido → fecha de juego.
+function historyKey(match) {
+  return [
+    new Date(match?.round?.season?.createdAt || 0).getTime(),
+    match?.round?.number || 0,
+    match?.number || 0,
+    new Date(match?.playedAt || 0).getTime(),
+  ];
+}
+
+// Resumen de jugador en el mismo formato que mostraba la página de jugadores:
+// partidos jugados, victorias/derrotas y racha actual. La racha se calcula
+// desde el partido más reciente hacia atrás.
+function summarizeHistory(histories) {
+  const sorted = [...histories].sort((a, b) => {
+    const keyA = historyKey(a.match);
+    const keyB = historyKey(b.match);
+    for (let i = 0; i < keyA.length; i += 1) {
+      if (keyA[i] !== keyB[i]) return keyA[i] - keyB[i];
+    }
+    return 0;
+  });
+
+  const wins = sorted.filter((entry) => entry.won).length;
+
+  let streak = 0;
+  let streakType = null;
+  for (let i = sorted.length - 1; i >= 0; i -= 1) {
+    const won = sorted[i].won;
+    if (streakType === null) streakType = won;
+    if (won !== streakType) break;
+    streak += 1;
+  }
+
+  return {
+    played: sorted.length,
+    wins,
+    losses: sorted.length - wins,
+    streak,
+    streakType,
+  };
+}
+
+// GET /api/players/stats
+// Resumen (partidos, V/D y racha) de todos los jugadores en una sola petición,
+// en vez de pedir el historial de cada uno por separado.
+export const getStats = async (req, res) => {
+  const histories = await EloHistory.find()
+    .select('player match')
+    .populate({
+      path: 'match',
+      select: 'winner playedAt number teamA teamB',
+      populate: [
+        {
+          path: 'round',
+          select: 'number season createdAt',
+          populate: { path: 'season', select: 'createdAt' },
+        },
+        { path: 'teamA.players', select: '_id' },
+        { path: 'teamB.players', select: '_id' },
+      ],
+    })
+    .lean();
+
+  const byPlayer = new Map();
+  for (const entry of histories) {
+    const match = entry.match;
+    if (!match || match.winner == null) continue;
+    const playerId = String(entry.player);
+    const winningTeam = match.winner === 1 ? match.teamA : match.teamB;
+    const won = (winningTeam?.players || []).some(
+      (player) => String(player._id) === playerId
+    );
+    if (!byPlayer.has(playerId)) byPlayer.set(playerId, []);
+    byPlayer.get(playerId).push({ match, won });
+  }
+
+  const stats = {};
+  for (const [playerId, entries] of byPlayer) {
+    stats[playerId] = summarizeHistory(entries);
+  }
+  res.json(stats);
 };

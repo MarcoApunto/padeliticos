@@ -1,5 +1,4 @@
 import Season from '../models/Season.js';
-import { ELO_K_FACTOR } from '../services/eloService.js';
 
 export const getAll = async (req, res) => {
   const seasons = await Season.find().sort({ createdAt: -1 });
@@ -15,10 +14,7 @@ export const getOne = async (req, res) => {
 export const create = async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'name es obligatorio' });
-  const season = await Season.create({
-    name,
-    kFactor: ELO_K_FACTOR,
-  });
+  const season = await Season.create({ name });
   res.status(201).json(season);
 };
 
@@ -35,10 +31,4 @@ export const update = async (req, res) => {
   });
   if (!season) return res.status(404).json({ error: 'Temporada no encontrada' });
   res.json(season);
-};
-
-export const remove = async (req, res) => {
-  const season = await Season.findByIdAndDelete(req.params.id);
-  if (!season) return res.status(404).json({ error: 'Temporada no encontrada' });
-  res.status(204).send();
 };

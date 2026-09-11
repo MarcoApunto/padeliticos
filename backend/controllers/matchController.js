@@ -6,6 +6,97 @@ import Player from '../models/Player.js';
 import EloHistory from '../models/EloHistory.js';
 import { computePreMatch, computeFinalElos, ELO_K_FACTOR } from '../services/eloService.js';
 import { rebuildRatings } from '../services/ratingService.js';
+import { HttpError } from '../errors.js';
+
+// Valida las notas manuales (0-10) de un equipo. Sin notas = undefined.
+function normalizeNotes(notes) {
+  if (notes === undefined) return undefined;
+  if (
+    !Array.isArray(notes) ||
+    notes.length !== 2 ||
+    notes.some(
+      (note) => typeof note !== 'number' || Number.isNaN(note) || note < 0 || note > 10
+    )
+  ) {
+    throw new HttpError(400, 'Las notas deben ser dos números entre 0 y 10');
+  }
+  return notes;
+}
+
+// Valida el marcador por sets (opcional). Si viene, no puede ser empate y
+// debe corresponderse con el ganador.
+function normalizeScore(score, winner) {
+  if (score === undefined) return undefined;
+  const teamA = Number(score?.teamA);
+  const teamB = Number(score?.teamB);
+  if (
+    !Number.isInteger(teamA) ||
+    !Number.isInteger(teamB) ||
+    teamA < 0 ||
+    teamB < 0
+  ) {
+    throw new HttpError(400, 'score debe incluir teamA y teamB como enteros ≥ 0');
+  }
+  if (teamA === teamB) {
+    throw new HttpError(400, 'El marcador no puede ser un empate');
+  }
+  if ((winner === 1) !== teamA > teamB) {
+    throw new HttpError(400, 'El marcador no coincide con el equipo ganador');
+  }
+  return { teamA, teamB };
+}
+
+// Valida el número de partido y las dos parejas, carga a los jugadores y
+// calcula los campos previos (media, probabilidad, diferencia de elo).
+// Reutilizado por create y updatePending para no duplicar lógica.
+async function resolveTeamData(number, teamA, teamB) {
+  if (
+    !Number.isInteger(Number(number)) ||
+    Number(number) < 1 ||
+    teamA?.players?.length !== 2 ||
+    teamB?.players?.length !== 2
+  ) {
+    throw new HttpError(
+      400,
+      'number, teamA.players (2) y teamB.players (2) son obligatorios'
+    );
+  }
+
+  const playerIds = [...teamA.players, ...teamB.players];
+  if (new Set(playerIds.map(String)).size !== 4) {
+    throw new HttpError(400, 'Los cuatro jugadores deben ser distintos');
+  }
+  const players = await Player.find({ _id: { $in: playerIds } });
+  if (players.length !== 4) {
+    throw new HttpError(400, 'Alguno de los jugadores no existe');
+  }
+  const eloById = Object.fromEntries(players.map((player) => [player.id, player.currentElo]));
+
+  const teamAElos = teamA.players.map((id) => eloById[id]);
+  const teamBElos = teamB.players.map((id) => eloById[id]);
+  const pre = computePreMatch(teamAElos, teamBElos);
+
+  return {
+    number: Number(number),
+    teamA: {
+      players: teamA.players,
+      eloBefore: teamAElos,
+      avgElo: pre.teamA.avgElo,
+      winProbability: pre.teamA.winProbability,
+    },
+    teamB: {
+      players: teamB.players,
+      eloBefore: teamBElos,
+      avgElo: pre.teamB.avgElo,
+      winProbability: pre.teamB.winProbability,
+    },
+    eloDifference: pre.eloDifference,
+  };
+}
+
+function apiError(err) {
+  return err.status || (err.name === 'ValidationError' ? 400 : 500);
+}
 
 // GET /api/rounds/:roundId/matches
 export const getAllForRound = async (req, res) => {
@@ -59,67 +150,28 @@ export const getOne = async (req, res) => {
 export const create = async (req, res) => {
   const { number, teamA, teamB } = req.body;
 
-  if (
-    !Number.isInteger(Number(number)) ||
-    Number(number) < 1 ||
-    teamA?.players?.length !== 2 ||
-    teamB?.players?.length !== 2
-  ) {
-    return res.status(400).json({
-      error: 'number, teamA.players (2) y teamB.players (2) son obligatorios',
-    });
-  }
-
   const round = await Round.findById(req.params.roundId);
   if (!round) return res.status(404).json({ error: 'Ronda no encontrada' });
 
-  const playerIds = [...teamA.players, ...teamB.players];
-  const players = await Player.find({ _id: { $in: playerIds } });
-  if (players.length !== 4) {
-    return res.status(400).json({ error: 'Alguno de los jugadores no existe' });
+  try {
+    const data = await resolveTeamData(number, teamA, teamB);
+    const match = await Match.create({ round: req.params.roundId, ...data });
+
+    res.status(201).json(match);
+  } catch (err) {
+    if (err.code === 11000) {
+      return res
+        .status(409)
+        .json({ error: 'Ese número de partido ya existe en la ronda' });
+    }
+    throw err;
   }
-  const eloById = Object.fromEntries(players.map((p) => [p.id, p.currentElo]));
-
-  const teamAElos = teamA.players.map((id) => eloById[id]);
-  const teamBElos = teamB.players.map((id) => eloById[id]);
-
-  const pre = computePreMatch(teamAElos, teamBElos);
-
-  const match = await Match.create({
-    round: req.params.roundId,
-    number,
-    teamA: {
-      players: teamA.players,
-      eloBefore: teamAElos,
-      avgElo: pre.teamA.avgElo,
-      winProbability: pre.teamA.winProbability,
-    },
-    teamB: {
-      players: teamB.players,
-      eloBefore: teamBElos,
-      avgElo: pre.teamB.avgElo,
-      winProbability: pre.teamB.winProbability,
-    },
-    eloDifference: pre.eloDifference,
-  });
-
-  res.status(201).json(match);
 };
 
 // PUT /api/matches/:id
 // Permite corregir las parejas o el número mientras el partido siga pendiente.
 export const updatePending = async (req, res) => {
   const { number, teamA, teamB } = req.body;
-  if (
-    !Number.isInteger(Number(number)) ||
-    Number(number) < 1 ||
-    teamA?.players?.length !== 2 ||
-    teamB?.players?.length !== 2
-  ) {
-    return res.status(400).json({
-      error: 'number, teamA.players (2) y teamB.players (2) son obligatorios',
-    });
-  }
 
   const match = await Match.findById(req.params.id);
   if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
@@ -129,35 +181,12 @@ export const updatePending = async (req, res) => {
     });
   }
 
-  const playerIds = [...teamA.players, ...teamB.players];
-  if (new Set(playerIds.map(String)).size !== 4) {
-    return res.status(400).json({ error: 'Los cuatro jugadores deben ser distintos' });
-  }
-  const players = await Player.find({ _id: { $in: playerIds } });
-  if (players.length !== 4) {
-    return res.status(400).json({ error: 'Alguno de los jugadores no existe' });
-  }
-
-  const eloById = Object.fromEntries(players.map((player) => [player.id, player.currentElo]));
-  const teamAElos = teamA.players.map((id) => eloById[id]);
-  const teamBElos = teamB.players.map((id) => eloById[id]);
-  const pre = computePreMatch(teamAElos, teamBElos);
-
-  match.number = number;
-  match.teamA = {
-    players: teamA.players,
-    eloBefore: teamAElos,
-    avgElo: pre.teamA.avgElo,
-    winProbability: pre.teamA.winProbability,
-  };
-  match.teamB = {
-    players: teamB.players,
-    eloBefore: teamBElos,
-    avgElo: pre.teamB.avgElo,
-    winProbability: pre.teamB.winProbability,
-  };
-  match.eloDifference = pre.eloDifference;
   try {
+    const data = await resolveTeamData(number, teamA, teamB);
+    match.number = data.number;
+    match.teamA = data.teamA;
+    match.teamB = data.teamB;
+    match.eloDifference = data.eloDifference;
     await match.save();
   } catch (err) {
     if (err.code === 11000) {
@@ -175,38 +204,43 @@ export const updatePending = async (req, res) => {
 // PUT /api/matches/:id/result
 // Corrige el resultado de un partido ya jugado y reconstruye el Elo posterior.
 export const updateResult = async (req, res) => {
-  const { winner, teamANotes, teamBNotes } = req.body;
+  const { winner, teamANotes, teamBNotes, score } = req.body;
   if (winner !== 1 && winner !== 2) {
     return res.status(400).json({ error: 'winner debe ser 1 o 2' });
   }
 
-  const match = await Match.findById(req.params.id);
-  if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
-  if (!match.winner) {
-    return res.status(409).json({
-      error: 'El partido aún no tiene resultado; usa la acción de cerrar partido',
-    });
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
+    if (!match.winner) {
+      return res.status(409).json({
+        error: 'El partido aún no tiene resultado; usa la acción de cerrar partido',
+      });
+    }
+
+    match.winner = winner;
+    if (teamANotes !== undefined) match.teamA.notes = normalizeNotes(teamANotes);
+    if (teamBNotes !== undefined) match.teamB.notes = normalizeNotes(teamBNotes);
+    if (score !== undefined) match.score = normalizeScore(score, winner);
+    match.playedAt = match.playedAt || new Date();
+    await match.save();
+    await rebuildRatings();
+
+    const updated = await Match.findById(match._id)
+      .populate('teamA.players', 'name currentElo')
+      .populate('teamB.players', 'name currentElo');
+    res.json(updated);
+  } catch (err) {
+    res.status(apiError(err)).json({ error: err.message || 'Error interno' });
   }
-
-  match.winner = winner;
-  if (teamANotes !== undefined) match.teamA.notes = teamANotes;
-  if (teamBNotes !== undefined) match.teamB.notes = teamBNotes;
-  match.playedAt = match.playedAt || new Date();
-  await match.save();
-  await rebuildRatings();
-
-  const updated = await Match.findById(match._id)
-    .populate('teamA.players', 'name currentElo')
-    .populate('teamB.players', 'name currentElo');
-  res.json(updated);
 };
 
 // PATCH /api/matches/:id/result
-// body: { winner: 1|2, teamANotes?: [n,n], teamBNotes?: [n,n] }
+// body: { winner: 1|2, teamANotes?: [n,n], teamBNotes?: [n,n], score?: {teamA, teamB} }
 // Cierra el partido: calcula el elo final de los 4 jugadores, actualiza
 // Player.currentElo y deja constancia en EloHistory. Todo en una transacción.
 export const setResult = async (req, res) => {
-  const { winner, teamANotes, teamBNotes } = req.body;
+  const { winner, teamANotes, teamBNotes, score } = req.body;
   if (winner !== 1 && winner !== 2) {
     return res.status(400).json({ error: 'winner debe ser 1 o 2' });
   }
@@ -235,8 +269,9 @@ export const setResult = async (req, res) => {
       match.playedAt = new Date();
       match.teamA.eloAfter = teamAFinal;
       match.teamB.eloAfter = teamBFinal;
-      if (teamANotes) match.teamA.notes = teamANotes;
-      if (teamBNotes) match.teamB.notes = teamBNotes;
+      if (teamANotes !== undefined) match.teamA.notes = normalizeNotes(teamANotes);
+      if (teamBNotes !== undefined) match.teamB.notes = normalizeNotes(teamBNotes);
+      if (score !== undefined) match.score = normalizeScore(score, winner);
       await match.save({ session });
 
       // Actualiza el elo "en vivo" de cada jugador + registra el historial.
@@ -275,9 +310,11 @@ export const setResult = async (req, res) => {
 
       result = match;
     });
+
+    await rebuildRatings();
     res.json(result);
   } catch (err) {
-    res.status(err.status || 500).json({ error: err.message || 'Error interno' });
+    res.status(apiError(err)).json({ error: err.message || 'Error interno' });
   } finally {
     session.endSession();
   }

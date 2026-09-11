@@ -18,6 +18,8 @@ const teamSchema = new Schema(
     // igual que en el Excel: IF(Nota="", 5, Nota).
     notes: {
       type: [Number],
+      min: 0,
+      max: 10,
       default: undefined,
     },
     // --- Campos calculados por el backend al crear/cerrar el partido ---
@@ -35,6 +37,11 @@ const matchSchema = new Schema(
     number: { type: Number, required: true }, // "Partido 1", "Partido 2"...
     teamA: { type: teamSchema, required: true },
     teamB: { type: teamSchema, required: true },
+    // Marcador por sets (opcional): total de sets ganados por cada equipo.
+    score: {
+      teamA: { type: Number, min: 0, default: undefined },
+      teamB: { type: Number, min: 0, default: undefined },
+    },
     eloDifference: Number, // "Diferencia de elo" (desde el punto de vista de teamA)
     // null = partido aún sin resultado. 1 = gana teamA, 2 = gana teamB.
     winner: { type: Number, enum: [1, 2, null], default: null },

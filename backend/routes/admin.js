@@ -14,5 +14,6 @@ router.put('/rounds/:id', ctrl.updateRound);
 router.delete('/rounds/:id', ctrl.removeRound);
 router.delete('/matches/:id', ctrl.removeMatch);
 router.put('/matches/:id', ctrl.updatePendingMatch);
+router.post('/ratings/rebuild', ctrl.rebuildRatings);
 
 export default router;

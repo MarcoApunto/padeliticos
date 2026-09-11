@@ -2,9 +2,18 @@ import Match from '../models/Match.js';
 import Player from '../models/Player.js';
 import Round from '../models/Round.js';
 import Season from '../models/Season.js';
-import { rebuildRatings } from '../services/ratingService.js';
+import { rebuildRatings as rebuildRatingsFromDb } from '../services/ratingService.js';
 
 export const check = (req, res) => res.json({ ok: true });
+
+export const rebuildRatings = async (req, res) => {
+  try {
+    await rebuildRatingsFromDb();
+    res.json({ ok: true, message: 'Elo reconstruido correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'No se pudo reconstruir el Elo' });
+  }
+};
 
 export const updatePlayer = async (req, res) => {
   const { name, currentElo, initialElo, active } = req.body;

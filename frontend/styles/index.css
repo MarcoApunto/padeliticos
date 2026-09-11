@@ -200,8 +200,24 @@ button {
         .history-page__toggle button { background: transparent; border: none; color: var(--text-muted); font-size: 12px; padding: 7px 12px; border-radius: 5px; }
         .history-page__toggle button[data-active] { background: var(--accent); color: var(--bg); font-weight: 600; }
         .history-page__header select { background: var(--surface-raised); color: var(--text); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; }
-        .history-page__section { margin-bottom: 28px; }
-        .history-page__section h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500; }
+.history-page__section { margin-bottom: 28px; }
+.history-page__section h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; font-weight: 500; }
+.history-page__season-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.history-page__season-filter select {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(237, 235, 222, 0.2);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 12px;
+}
         .history-page__error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--danger); border-radius: var(--radius-md); color: var(--danger); }
         .history-page__error p { margin: 0; }
         .history-page__error button { flex-shrink: 0; padding: 8px 12px; border: 1px solid var(--danger); border-radius: var(--radius-sm); background: transparent; color: var(--danger); }
@@ -461,6 +477,21 @@ button {
         }
         .round-match__actions { display: flex; gap: 6px; flex-shrink: 0; }
         .round-match__status { color: var(--text-muted); font-size: 12px !important; }
+        .round-match__head {
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+        }
+        .round-match__lineup {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 4px 8px;
+        }
+        .round-match__team[data-won] { color: var(--team-a); font-weight: 700; }
+        .round-match__team[data-lost] { opacity: 0.5; }
+        .round-match__pct { margin: 0 4px; color: var(--text-muted); font-size: 12px !important; }
+        .round-match__sep { color: var(--text-muted); font-size: 12px !important; }
         @media (max-width: 560px) {
           .round-match { align-items: flex-start; flex-direction: column; }
         }
@@ -807,6 +838,22 @@ button {
           flex-direction: column;
           gap: 10px;
         }
+        .matches-page__season { margin-bottom: 24px; }
+        .matches-page__season-title {
+          font-size: 14px;
+          color: var(--accent);
+          font-weight: 600;
+          margin: 0 0 12px;
+          padding-bottom: 6px;
+          border-bottom: 1px solid var(--surface-raised);
+        }
+        .matches-page__round { margin-bottom: 14px; }
+        .matches-page__round-title {
+          font-size: 12px;
+          color: var(--text-muted);
+          font-weight: 600;
+          margin: 0 0 8px;
+        }
         .matches-page__error {
           display: flex;
           align-items: center;
@@ -943,12 +990,21 @@ button {
         }
         .players-page__list li {
           display: flex;
+          flex-direction: column;
+          gap: 2px;
+          padding: 8px 14px;
+          background: var(--surface);
+          border-radius: var(--radius-md);
+        }
+        .players-page__line {
+          display: flex;
           align-items: center;
           gap: 10px;
           flex-wrap: wrap;
-          padding: 10px 14px;
-          background: var(--surface);
-          border-radius: var(--radius-md);
+        }
+        .players-page__stats {
+          font-size: 11px;
+          color: var(--text-muted);
         }
         .players-page__list li[data-inactive] {
           opacity: 0.5;
@@ -987,13 +1043,29 @@ button {
           gap: 8px;
         }
         .ranking__row {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 10px 14px;
+          background: var(--surface);
+          border-radius: var(--radius-md);
+        }
+        .ranking__line {
           display: grid;
           grid-template-columns: 24px 1fr 120px 52px;
           align-items: center;
           gap: 12px;
-          padding: 10px 14px;
-          background: var(--surface);
-          border-radius: var(--radius-md);
+        }
+        .ranking__stats {
+          font-size: 12px;
+          color: var(--text-muted);
+          margin-left: 36px;
+        }
+        .ranking__streak[data-direction='win'] {
+          color: var(--team-a);
+        }
+        .ranking__streak[data-direction='loss'] {
+          color: var(--danger);
         }
         .ranking__pos {
           color: var(--text-muted);
@@ -1078,4 +1150,42 @@ button {
   }
   .net__probs [data-team='a'] { color: var(--team-a); }
   .net__probs [data-team='b'] { color: var(--team-b); }
+
+/* Marcador por sets en el panel de resultado */
+
+  .result-panel__notes-row + .result-panel__score-row { margin-top: 10px; }
+  .result-panel__score-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .result-panel__score-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+  .result-panel__score-field input {
+    width: 60px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(237, 235, 222, 0.2);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .result-panel__score-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 8px 0 0;
+  }
+  .result-panel__score-hint[data-warn] { color: var(--danger); }
+
+/* Marcador en la lista global de partidos */
+
+  .match-row__score {
+    display: block;
+    margin-top: 2px;
+    color: var(--text);
+  }
 

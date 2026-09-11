@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { previewFinalElo } from '../../utils/elo.js';
+import { previewFinalElo, ELO_K_FACTOR } from '../../utils/elo.js';
 
 // Se muestra una vez el partido ya existe en el backend (con media, diferencia
 // y probabilidad calculadas). Aquí solo falta declarar quién ganó y, si se
-// quiere, la nota (0-10) de cada jugador. Al confirmar, se cierra el partido
-// vía PATCH /matches/:id/result, que es donde el servidor calcula y persiste
-// el elo final de verdad.
-export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
+// quiere, la nota (0-10) de cada jugador y el marcador por sets. Al confirmar,
+// se cierra el partido vía PATCH /matches/:id/result, que es donde el servidor
+// calcula y persiste el elo final de verdad.
+export default function ResultPanel({ match, onConfirm, saving }) {
   const [winner, setWinner] = useState(match.winner || null);
   const [notes, setNotes] = useState({
     a: match.teamA.notes || [undefined, undefined],
     b: match.teamB.notes || [undefined, undefined],
+  });
+  const [score, setScore] = useState({
+    teamA: match.score?.teamA ?? '',
+    teamB: match.score?.teamB ?? '',
   });
 
   const teamAElos = match.teamA.eloBefore;
@@ -24,12 +28,14 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
     const isWinner = (team === 'a' && winner === 1) || (team === 'b' && winner === 2);
     return elos.map((elo, i) => {
       const prob = 1 / (1 + 10 ** ((rivalAvg - elo) / 4));
-      return previewFinalElo(elo, kFactor, isWinner, prob, notes[team][i]);
+      return previewFinalElo(elo, ELO_K_FACTOR, isWinner, prob, notes[team][i]);
     });
   };
 
   const previewA = previewFor('a');
   const previewB = previewFor('b');
+  const teamAChance = Math.round((match.teamA.winProbability || 0) * 100);
+  const teamBChance = Math.round((match.teamB.winProbability || 0) * 100);
 
   const updateNote = (team, index, value) => {
     setNotes((prev) => {
@@ -39,9 +45,21 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
     });
   };
 
+  const updateScore = (team, value) => {
+    setScore((prev) => ({ ...prev, [team]: value === '' ? '' : value }));
+  };
+
+  const scoreComplete = score.teamA !== '' && score.teamB !== '';
+  const halfScore = (score.teamA === '') !== (score.teamB === '');
+
   return (
     <div className="result-panel">
       <h3>{match.winner ? 'Editar resultado' : '¿Quién ganó?'}</h3>
+      <div className="result-panel__probabilities" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', fontWeight: 600 }}>
+        <span className="numeric" data-team="a">{teamAChance}%</span>
+        <span>Probabilidad</span>
+        <span className="numeric" data-team="b">{teamBChance}%</span>
+      </div>
       <div className="result-panel__teams">
         {['a', 'b'].map((team) => {
           const teamData = team === 'a' ? match.teamA : match.teamB;
@@ -72,6 +90,38 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
       </div>
 
       <details className="result-panel__notes">
+        <summary>Marcador por sets (opcional)</summary>
+        <div className="result-panel__score-row">
+          {['a', 'b'].map((team) => {
+            const teamData = team === 'a' ? match.teamA : match.teamB;
+            return (
+              <label key={team} className="result-panel__score-field" data-team={team}>
+                <span>{teamData.players.map((p) => p.name).join(' + ')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  aria-label={`Sets de ${teamData.players.map((p) => p.name).join(' + ')}`}
+                  value={score[team]}
+                  onChange={(e) => updateScore(team, e.target.value)}
+                />
+              </label>
+            );
+          })}
+        </div>
+        {scoreComplete && (
+          <p className="result-panel__score-hint">
+            {score.teamA} – {score.teamB} {winner ? `para el equipo ${winner === 1 ? 'A' : 'B'}` : ''}
+          </p>
+        )}
+        {halfScore && (
+          <p className="result-panel__score-hint" data-warn>
+            Rellena el marcador de los dos equipos o déjalo vacío.
+          </p>
+        )}
+      </details>
+
+      <details className="result-panel__notes">
         <summary>Añadir nota por jugador (opcional, 0-10)</summary>
         {['a', 'b'].map((team) => {
           const teamData = team === 'a' ? match.teamA : match.teamB;
@@ -98,12 +148,15 @@ export default function ResultPanel({ match, kFactor, onConfirm, saving }) {
       <button
         type="button"
         className="result-panel__confirm"
-        disabled={!winner || saving}
+        disabled={!winner || saving || halfScore}
         onClick={() =>
           onConfirm({
             winner,
             teamANotes: notes.a.some((n) => n !== undefined) ? notes.a : undefined,
             teamBNotes: notes.b.some((n) => n !== undefined) ? notes.b : undefined,
+            score: scoreComplete
+              ? { teamA: Number(score.teamA), teamB: Number(score.teamB) }
+              : undefined,
           })
         }
       >

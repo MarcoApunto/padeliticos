@@ -61,6 +61,44 @@ export default function HistoryPage({ players }) {
   const [seasonsError, setSeasonsError] = useState(null);
   const [historyError, setHistoryError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [historySeasonId, setHistorySeasonId] = useState('');
+
+  // Temporadas en las que este jugador ha jugado, en orden cronológico.
+  const historySeasons = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    for (const entry of singleHistory) {
+      const id = entry.match?.round?.season?._id || entry.season?._id;
+      const name = entry.match?.round?.season?.name || entry.season?.name;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        result.push({ id, name });
+      }
+    }
+    return result;
+  }, [singleHistory]);
+
+  // Por defecto se selecciona la última temporada jugada.
+  useEffect(() => {
+    if (historySeasons.length === 0) {
+      setHistorySeasonId('');
+      return;
+    }
+    const ids = historySeasons.map((season) => season.id);
+    setHistorySeasonId((current) =>
+      !current || !ids.includes(current)
+        ? historySeasons[historySeasons.length - 1].id
+        : current
+    );
+  }, [historySeasons]);
+
+  const filteredHistory = useMemo(() => {
+    if (!historySeasonId) return singleHistory;
+    return singleHistory.filter((entry) => {
+      const id = entry.match?.round?.season?._id || entry.season?._id;
+      return id === historySeasonId;
+    });
+  }, [singleHistory, historySeasonId]);
 
   useEffect(() => {
     setSeasonsError(null);
@@ -165,13 +203,32 @@ export default function HistoryPage({ players }) {
             <h3>Progresión de Elo</h3>
             <EloProgressionChart
               series={mode === 'single' ? singleSeries : allSeries}
-              seasonMarkers={mode === 'all' ? allRankInfo.seasonMarkers : []}
+              seasonMarkers={
+                mode === 'all' ? allRankInfo.seasonMarkers : singleRankInfo.seasonMarkers
+              }
             />
           </section>
           {mode === 'single' && (
             <section className="history-page__section">
               <h3>Partidos jugados</h3>
-              <MatchHistoryList entries={singleHistory} />
+              {historySeasons.length > 0 && (
+                <div className="history-page__season-filter">
+                  <label htmlFor="history-season">Temporada</label>
+                  <select
+                    id="history-season"
+                    value={historySeasonId}
+                    onChange={(event) => setHistorySeasonId(event.target.value)}
+                  >
+                    {historySeasons.length > 1 && <option value="">Todas</option>}
+                    {historySeasons.map((season) => (
+                      <option key={season.id} value={season.id}>
+                        {season.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <MatchHistoryList entries={filteredHistory} />
             </section>
           )}
         </>

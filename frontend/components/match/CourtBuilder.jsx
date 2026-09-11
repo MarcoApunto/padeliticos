@@ -17,7 +17,7 @@ const SLOT_IDS = ['a-0', 'a-1', 'b-0', 'b-1'];
 // Estado inicial de los 4 huecos de la pista, todos vacíos.
 const emptySlots = () => ({ 'a-0': null, 'a-1': null, 'b-0': null, 'b-1': null });
 
-export default function CourtBuilder({ players, round, kFactor, onMatchClosed }) {
+export default function CourtBuilder({ players, round, onMatchClosed }) {
   const [slots, setSlots] = useState(emptySlots);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [match, setMatch] = useState(null); // partido ya creado en backend
@@ -168,16 +168,23 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
         teamA: { players: [slots['a-0'], slots['a-1']] },
         teamB: { players: [slots['b-0'], slots['b-1']] },
       };
+      let createdMatchId = null;
       if (editingMatchId) {
         await api.updateMatch(editingMatchId, payload);
+        setEditingMatchId(null);
       } else {
-        await api.createMatch(round._id, payload);
+        const created = await api.createMatch(round._id, payload);
         setNextMatchNumber((n) => n + 1);
+        createdMatchId = created._id;
       }
       setSlots(emptySlots());
       const updatedMatches = await api.getMatches(round._id);
       setMatches(updatedMatches);
-      setEditingMatchId(null);
+      // Abrimos directamente el panel de resultado del partido recién creado.
+      if (createdMatchId) {
+        const populated = updatedMatches.find((item) => item._id === createdMatchId);
+        setMatch(populated || null);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -314,7 +321,6 @@ export default function CourtBuilder({ players, round, kFactor, onMatchClosed })
           <ResultPanel
             key={`${match._id}-${match.winner || 'pending'}`}
             match={match}
-            kFactor={kFactor}
             onConfirm={handleConfirmResult}
             saving={savingResult}
           />
@@ -340,15 +346,65 @@ function RoundMatches({ matches, loading, onSelect, onEdit }) {
         <div className="round-matches__list">
           {matches.map((match) => {
             const pending = !match.winner;
+            const pctA = Math.round((match.teamA.winProbability || 0) * 100);
+            const pctB = Math.round((match.teamB.winProbability || 0) * 100);
+            const teamANames = match.teamA.players.map((player) => player.name).join(' + ');
+            const teamBNames = match.teamB.players.map((player) => player.name).join(' + ');
+            // Cuando hay resultado, el ganador se muestra primero para que
+            // la frase lea "ganador ganó a perdedor".
+            const sides = pending
+              ? [
+                  { team: 'a', label: teamANames, won: false },
+                  { team: 'b', label: teamBNames, won: false },
+                ]
+              : match.winner === 1
+                ? [
+                    { team: 'a', label: teamANames, won: true },
+                    { team: 'b', label: teamBNames, won: false },
+                  ]
+                : [
+                    { team: 'b', label: teamBNames, won: true },
+                    { team: 'a', label: teamANames, won: false },
+                  ];
             return (
               <div className="round-match" key={match._id} data-pending={pending || undefined}>
                 <div>
-                  <strong>Partido {match.number}</strong>
-                  <span>
-                    {match.teamA.players.map((player) => player.name).join(' + ')}
-                    {' vs '}
-                    {match.teamB.players.map((player) => player.name).join(' + ')}
-                  </span>
+                  <div className="round-match__head">
+                    <strong>Partido {match.number}</strong>
+                  </div>
+                  <div className="round-match__lineup">
+                    {sides.map((side, index) => {
+                      const pct = side.team === 'a' ? pctA : pctB;
+                      return (
+                        <React.Fragment key={index}>
+                          {index === 1 && <span className="round-match__sep">vs</span>}
+                          <span
+                            className="round-match__team"
+                            data-team={side.team}
+                            data-won={side.won || undefined}
+                            data-lost={!pending && !side.won || undefined}
+                          >
+                            {index === 0 ? (
+                              <>
+                                {side.label}
+                                <span className="round-match__pct numeric">({pct}%)</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="round-match__pct numeric">({pct}%)</span>
+                                {side.label}
+                              </>
+                            )}
+                          </span>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                  {!pending && (
+                    <span className="round-match__status">
+                      Ganó el equipo {match.winner === 1 ? 'A' : 'B'}
+                    </span>
+                  )}
                 </div>
                 {pending ? (
                   <div className="round-match__actions">

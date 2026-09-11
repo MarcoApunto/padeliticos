@@ -88,7 +88,6 @@ export default function App() {
             <CourtBuilder
               players={activePlayers}
               round={round}
-              kFactor={round.kFactor}
               onMatchClosed={handleMatchClosed}
             />
           ) : (

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
-import { ELO_K_FACTOR } from '../../utils/elo.js';
 
 export default function SeasonRoundPicker({ onRoundReady }) {
   const [seasons, setSeasons] = useState([]);
@@ -72,7 +71,6 @@ export default function SeasonRoundPicker({ onRoundReady }) {
         onRoundReady({
           ...round,
           matchCount: matches.length,
-          kFactor: ELO_K_FACTOR,
         });
       })
       .catch((err) => {

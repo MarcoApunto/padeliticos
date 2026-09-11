@@ -28,6 +28,7 @@ export const api = {
     request(`/players/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePlayer: (id) => request(`/players/${id}`, { method: 'DELETE' }),
   getPlayerHistory: (id) => request(`/players/${id}/history`),
+  getPlayerStats: () => request('/players/stats'),
 
   // Temporadas (semanas)
   getSeasons: () => request('/seasons'),

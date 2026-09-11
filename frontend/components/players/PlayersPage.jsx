@@ -63,13 +63,16 @@ export default function PlayersPage({ players, onChange }) {
       <ul className="players-page__list">
         {players.map((p) => (
           <li key={p._id} data-inactive={!p.active || undefined}>
-            <span className="players-page__name">{p.name}</span>
-            <span className="numeric players-page__elo">
-              {p.currentElo.toFixed(2)}
+            <div className="players-page__line">
+              <span className="players-page__name">{p.name}</span>
+              <span className="numeric players-page__elo">{p.currentElo.toFixed(2)}</span>
+              <button type="button" onClick={() => handleToggleActive(p)}>
+                {p.active ? 'Desactivar' : 'Activar'}
+              </button>
+            </div>
+            <span className="players-page__stats numeric">
+              ELO inicial {p.initialElo.toFixed(2)}
             </span>
-            <button type="button" onClick={() => handleToggleActive(p)}>
-              {p.active ? 'Desactivar' : 'Activar'}
-            </button>
           </li>
         ))}
       </ul>

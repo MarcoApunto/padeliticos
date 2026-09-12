@@ -5,17 +5,19 @@
 export const ELO_MIN = 0.5;
 export const ELO_MAX = 7;
 export const ELO_K_FACTOR = 0.5;
+export const PARTNER_WEIGHT = 0.4;
 
 export function clampElo(elo) {
   return Math.min(ELO_MAX, Math.max(ELO_MIN, elo));
 }
 
-function winProbabilityForPlayer(eloRivalTeamAvg, eloPlayer) {
-  return 1 / (1 + 10 ** ((eloRivalTeamAvg - eloPlayer) / 4));
-}
-
 function teamWinProbability(rivalEloDifference) {
   return 1 / (1 + 10 ** (rivalEloDifference / 4));
+}
+
+function playerWinProbability(eloPlayer, eloPartner, rivalTeamAvg) {
+  const blended = (1 - PARTNER_WEIGHT) * eloPlayer + PARTNER_WEIGHT * eloPartner;
+  return 1 / (1 + 10 ** ((rivalTeamAvg - blended) / 4));
 }
 
 export function previewMatch(teamAElos, teamBElos) {
@@ -28,15 +30,15 @@ export function previewMatch(teamAElos, teamBElos) {
     teamA: {
       avgElo: avgA,
       winProbability: teamWinProbability(diffB),
-      playerProbabilities: teamAElos.map((elo) =>
-        winProbabilityForPlayer(avgB, elo)
+      playerProbabilities: teamAElos.map((elo, i) =>
+        playerWinProbability(elo, teamAElos[1 - i], avgB)
       ),
     },
     teamB: {
       avgElo: avgB,
       winProbability: teamWinProbability(diffA),
-      playerProbabilities: teamBElos.map((elo) =>
-        winProbabilityForPlayer(avgA, elo)
+      playerProbabilities: teamBElos.map((elo, i) =>
+        playerWinProbability(elo, teamBElos[1 - i], avgA)
       ),
     },
     eloDifference: diffA,

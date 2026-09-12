@@ -249,7 +249,12 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
 
           {hoveredPoint && (
             <div className="elo-chart__tooltip" ref={tooltipRef} style={tipStyle}>
-              <strong style={{ color: isMulti ? colorForId(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong>
+              <span className="elo-chart__tooltip-title">
+                <strong style={{ color: isMulti ? colorForId(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong>
+                {hoveredPoint.match && hoveredPoint.match.round != null ? (
+                  <span className="elo-chart__tooltip-meta">· Ronda {hoveredPoint.match.round}</span>
+                ) : null}
+              </span>
               {hoveredPoint.match ? (
                 <>
                   <span className="elo-chart__tooltip-vs">

@@ -250,7 +250,8 @@ button {
           cursor: crosshair;
         }
         .elo-chart__tooltip { position: absolute; transform: translate(-50%, -130%); background: var(--surface-raised); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; pointer-events: none; white-space: nowrap; text-align: left; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); z-index: 5; }
-        .elo-chart__tooltip-vs { color: var(--text-muted); }
+        .elo-chart__tooltip-title { display: flex; align-items: baseline; gap: 6px; }
+        .elo-chart__tooltip-meta { color: var(--text-muted); font-weight: 400; }
         .elo-chart__tooltip-result { font-weight: 600; }
         .elo-chart__tooltip-result[data-result='win'] { color: var(--team-a); }
         .elo-chart__tooltip-result[data-result='loss'] { color: var(--danger); }

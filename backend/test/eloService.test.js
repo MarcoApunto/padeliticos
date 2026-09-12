@@ -5,8 +5,8 @@ import {
   ELO_MIN,
   ELO_MAX,
   clampElo,
-  winProbabilityForPlayer,
   teamWinProbability,
+  playerWinProbability,
   finalElo,
   computePreMatch,
   computeFinalElos,
@@ -19,8 +19,8 @@ test('clampElo acota al rango [0.5, 7]', () => {
 });
 
 test('con elo medio igual la probabilidad es 0.5', () => {
-  assert.equal(winProbabilityForPlayer(3, 3), 0.5);
   assert.equal(teamWinProbability(0), 0.5);
+  assert.equal(playerWinProbability(3, 3, 3), 0.5);
 });
 
 test('finalElo con nota neutra (5) depende solo de probabilidad y K', () => {
@@ -45,13 +45,37 @@ test('las probabilidades de los dos equipos suman 1', () => {
   assert.ok(Math.abs(teamA.winProbability + teamB.winProbability - 1) < 1e-12);
 });
 
-test('computePreMatch calcula medias, diferencia y probabilidad por jugador', () => {
+test('computePreMatch calcula medias, diferencia y probabilidades', () => {
   const pre = computePreMatch([3, 4], [2, 3]);
   assert.equal(pre.teamA.avgElo, 3.5);
   assert.equal(pre.teamB.avgElo, 2.5);
   assert.equal(pre.eloDifference, 1);
-  // El jugador con más elo tiene más probabilidad de subir que su compañero.
+  // El más fuerte mantiene probabilidad mayor que su compañero (movimiento
+  // individual), pero la probabilidad queda cerca de la del equipo: el
+  // compañero cuenta sin igualarlos del todo.
   assert.ok(pre.teamA.playerProbabilities[1] > pre.teamA.playerProbabilities[0]);
+  assert.ok(
+    Math.abs(pre.teamA.playerProbabilities[0] - pre.teamA.winProbability) < 0.03
+  );
+});
+
+test('un jugador débil sube mucho menos al ganar con un crack que en el Excel', () => {
+  const pre = computePreMatch([0.5, 3.5], [2.5, 2.5]);
+  const [probDebil, probCrack] = pre.teamA.playerProbabilities;
+  const subida = (p) => 0.5 * (1 - p);
+  const subidaDebil = subida(probDebil);
+  const subidaCrack = subida(probCrack);
+  // El débil sigue subiendo más que el crack (no son idénticos)…
+  assert.ok(subidaDebil > subidaCrack);
+  // …pero mucho menos que con la fórmula del Excel (solo elo propio),
+  // donde el débil subía +0.38 y el crack +0.18 (relación 2.1×).
+  const probExcelDebil = playerWinProbability(0.5, 0.5, 2.5); // pareja = él mismo
+  const probExcelCrack = playerWinProbability(3.5, 3.5, 2.5);
+  const subidaExcelDebil = subida(probExcelDebil);
+  const subidaExcelCrack = subida(probExcelCrack);
+  assert.ok(subidaDebil < subidaExcelDebil);
+  assert.ok(subidaCrack > subidaExcelCrack);
+  assert.ok(subidaDebil / subidaCrack < subidaExcelDebil / subidaExcelCrack);
 });
 
 test('computeFinalElos premia al ganador y castiga al perdedor', () => {

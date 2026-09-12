@@ -3,12 +3,20 @@
  * de la hoja "Semana X" del Excel original.
  *
  * Fórmulas de referencia (Excel):
- *   Probabilidad = 1 / (1 + 10^((EloEquipoRival - EloJugador) / 4))
  *   Media equipo  = (EloJugador1 + EloJugador2) / 2
  *   Diferencia    = MediaEquipoA - MediaEquipoB
  *   ProbVictoria  = 1 / (1 + 10^(DiferenciaRival / 4))
  *   EloFinal      = EloActual + K * (esGanador - Probabilidad)
  *                   + ((Nota o 5) - 5) / 10
+ *
+ * La probabilidad de cada jugador se calcula con un ELO EFECTIVO que mezcla
+ * su elo y el de su compañero (60% propio / 40% compañero). Así el compañero
+ * siempre influye: un jugador débil que gana al lado de un crack sube mucho
+ * menos que en el Excel (el crack le "absorbe" parte del premio), pero los
+ * dos jugadores de un equipo no se mueven igual salvo que tengan el mismo elo.
+ *
+ *   EloEfectivo  = 0.6 * EloJugador + 0.4 * EloCompañero
+ *   Probabilidad = 1 / (1 + 10^((EloEquipoRival - EloEfectivo) / 4))
  *
  * A diferencia del Excel original, aquí el Elo se acota siempre al rango
  * [ELO_MIN, ELO_MAX] = [0.5, 7], igual que los rangos de Playtomic. Cualquier
@@ -20,20 +28,17 @@ const ELO_MAX = 7;
 const ELO_K_FACTOR = 0.5;
 
 /**
+ * Peso del compañero en el elo efectivo de cada jugador. El 60% restante es
+ * el propio elo, de modo que la pareja cuenta sin llegar a igualar a ambos.
+ */
+const PARTNER_WEIGHT = 0.4;
+
+/**
  * Recorta un valor de elo al rango permitido [ELO_MIN, ELO_MAX].
  * @param {number} elo
  */
 function clampElo(elo) {
   return Math.min(ELO_MAX, Math.max(ELO_MIN, elo));
-}
-
-/**
- * Probabilidad de que un jugador aumente su elo frente al elo medio rival.
- * @param {number} eloRivalTeamAvg
- * @param {number} eloPlayer
- */
-function winProbabilityForPlayer(eloRivalTeamAvg, eloPlayer) {
-  return 1 / (1 + 10 ** ((eloRivalTeamAvg - eloPlayer) / 4));
 }
 
 /**
@@ -43,6 +48,27 @@ function winProbabilityForPlayer(eloRivalTeamAvg, eloPlayer) {
  */
 function teamWinProbability(rivalEloDifference) {
   return 1 / (1 + 10 ** (rivalEloDifference / 4));
+}
+
+/**
+ * Elo efectivo de un jugador para el cálculo de su probabilidad: mezcla su
+ * elo con el de su compañero de forma que la pareja siempre cuenta.
+ * @param {number} eloPlayer
+ * @param {number} eloPartner
+ */
+function blendedElo(eloPlayer, eloPartner) {
+  return (1 - PARTNER_WEIGHT) * eloPlayer + PARTNER_WEIGHT * eloPartner;
+}
+
+/**
+ * Probabilidad individual de aumentar elo frente a la media del equipo rival,
+ * usando el elo efectivo (ela del jugador + peso del compañero).
+ * @param {number} eloPlayer
+ * @param {number} eloPartner
+ * @param {number} rivalTeamAvg elo medio del equipo rival
+ */
+function playerWinProbability(eloPlayer, eloPartner, rivalTeamAvg) {
+  return 1 / (1 + 10 ** ((rivalTeamAvg - blendedElo(eloPlayer, eloPartner)) / 4));
 }
 
 /**
@@ -83,17 +109,17 @@ function computePreMatch(teamAElos, teamBElos) {
       eloBefore: teamAElos,
       avgElo: avgA,
       winProbability: teamAWinProbability,
-      // probabilidad individual de cada jugador frente a la media rival
-      playerProbabilities: teamAElos.map((elo) =>
-        winProbabilityForPlayer(avgB, elo)
+      // probabilidad individual con el compañero mezclado (no idéntica salvo elo igual)
+      playerProbabilities: teamAElos.map((elo, i) =>
+        playerWinProbability(elo, teamAElos[1 - i], avgB)
       ),
     },
     teamB: {
       eloBefore: teamBElos,
       avgElo: avgB,
       winProbability: teamBWinProbability,
-      playerProbabilities: teamBElos.map((elo) =>
-        winProbabilityForPlayer(avgA, elo)
+      playerProbabilities: teamBElos.map((elo, i) =>
+        playerWinProbability(elo, teamBElos[1 - i], avgA)
       ),
     },
     eloDifference: diffA,
@@ -150,9 +176,10 @@ export {
   ELO_MIN,
   ELO_MAX,
   ELO_K_FACTOR,
+  PARTNER_WEIGHT,
   clampElo,
-  winProbabilityForPlayer,
   teamWinProbability,
+  playerWinProbability,
   finalElo,
   computePreMatch,
   computeFinalElos,

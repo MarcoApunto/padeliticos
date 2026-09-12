@@ -113,6 +113,10 @@ export const getHistory = async (req, res) => {
           name: player.name,
         })),
         won,
+        score:
+          match.score?.teamA != null && match.score?.teamB != null
+            ? match.score
+            : undefined,
       },
     };
   });

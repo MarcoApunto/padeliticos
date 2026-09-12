@@ -26,7 +26,6 @@ export const api = {
     request('/players', { method: 'POST', body: JSON.stringify(data) }),
   updatePlayer: (id, data) =>
     request(`/players/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  deletePlayer: (id) => request(`/players/${id}`, { method: 'DELETE' }),
   getPlayerHistory: (id) => request(`/players/${id}/history`),
   getPlayerStats: () => request('/players/stats'),
 
@@ -83,7 +82,6 @@ export const api = {
       },
     });
   },
-  deleteMatch: (id) => request(`/matches/${id}`, { method: 'DELETE' }),
 
   admin: {
     check: (key) => adminRequest('/admin/check', key),

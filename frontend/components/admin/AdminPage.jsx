@@ -243,7 +243,6 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
           <button type="submit">Desbloquear</button>
         </form>
         {error && <p className="admin-page__error" role="alert">{error}</p>}
-        <AdminStyles />
       </section>
     );
   }
@@ -357,11 +356,6 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
       </section>
 
       <p className="admin-page__note">Los borrados de temporadas y rondas solo se permiten si están vacías. Los jugadores se dan de baja para conservar su historial.</p>
-      <AdminStyles />
     </section>
   );
-}
-
-function AdminStyles() {
-  return;
 }

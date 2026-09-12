@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { previewFinalElo, ELO_K_FACTOR } from '../../utils/elo.js';
+import {
+  previewFinalElo,
+  playerWinProbability,
+  ELO_K_FACTOR,
+} from '../../utils/elo.js';
 
 // Se muestra una vez el partido ya existe en el backend (con media, diferencia
 // y probabilidad calculadas). Aquí solo falta declarar quién ganó y, si se
@@ -21,15 +25,27 @@ export default function ResultPanel({ match, onConfirm, saving }) {
   const teamAElos = match.teamA.eloBefore;
   const teamBElos = match.teamB.eloBefore;
 
+  // Elo ACTUAL ("en vivo" acumulado) de cada equipo, para previsualizar el
+  // cambio real: igual que el backend, la probabilidad sale de la base FIJA
+  // de pretemporada (eloBefore) pero el resultado se suma al elo actual.
+  const currentElosFor = (team) => {
+    const teamData = team === 'a' ? match.teamA : match.teamB;
+    return teamData.players.map((player, i) => player.currentElo ?? teamData.eloBefore?.[i]);
+  };
+
   const previewFor = (team) => {
     if (!winner) return null;
     const elos = team === 'a' ? teamAElos : teamBElos;
+    const currentElos = currentElosFor(team);
     const rivalAvg =
       team === 'a' ? match.teamB.avgElo : match.teamA.avgElo;
     const isWinner = (team === 'a' && winner === 1) || (team === 'b' && winner === 2);
     return elos.map((elo, i) => {
-      const prob = 1 / (1 + 10 ** ((rivalAvg - elo) / 4));
-      return previewFinalElo(elo, ELO_K_FACTOR, isWinner, prob, notes[team][i]);
+      // Misma fórmula que el backend (computeFinalElos): probabilidad con el
+      // elo EFECTIVO mezclado (60% propio / 40% compañero), no con el elo a
+      // secas. Así la vista previa coincide con el resultado que se guarda.
+      const prob = playerWinProbability(elo, elos[1 - i], rivalAvg);
+      return previewFinalElo(currentElos[i], ELO_K_FACTOR, isWinner, prob, notes[team][i]);
     });
   };
 
@@ -80,7 +96,7 @@ export default function ResultPanel({ match, onConfirm, saving }) {
               </span>
               {preview && (
                 <span className="result-panel__preview numeric">
-                  {teamData.eloBefore
+                  {currentElosFor(team)
                     .map((e, i) => `${e.toFixed(2)} → ${preview[i].toFixed(2)}`)
                     .join(' · ')}
                 </span>

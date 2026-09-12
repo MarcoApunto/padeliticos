@@ -95,14 +95,18 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
 
   const preview = useMemo(() => {
     if (!isComplete) return null;
-    const teamAElos = [slots['a-0'], slots['a-1']].map(
-      (id) => playersById[id]?.currentElo
-    );
-    const teamBElos = [slots['b-0'], slots['b-1']].map(
-      (id) => playersById[id]?.currentElo
-    );
+    // Misma regla que el backend: el preview de la Ronda 2 se calcula contra la
+    // base de PRETEMPORADA de la temporada (season.baseEloByPlayer), NO contra
+    // el currentElo acumulado. El snapshot se captura al crear la temporada y
+    // queda fijo para todos los partidos, así lo ganado/perdido en la Ronda 1
+    // no se tiene en cuenta en la Ronda 2.
+    const baseByPlayer = round.season?.baseEloByPlayer;
+    const resolveElo = (id) =>
+      baseByPlayer?.[id] ?? baseByPlayer?.get?.(id) ?? playersById[id]?.currentElo;
+    const teamAElos = [slots['a-0'], slots['a-1']].map(resolveElo);
+    const teamBElos = [slots['b-0'], slots['b-1']].map(resolveElo);
     return previewMatch(teamAElos, teamBElos);
-  }, [isComplete, slots, playersById]);
+  }, [isComplete, slots, playersById, round.season?.baseEloByPlayer]);
 
   function assign(slotId, playerId) {
     setSlots((prev) => {

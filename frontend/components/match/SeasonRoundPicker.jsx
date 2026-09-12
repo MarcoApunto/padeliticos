@@ -107,7 +107,13 @@ export default function SeasonRoundPicker({ onRoundReady }) {
     const nextNumber = Math.max(0, ...rounds.map((round) => Number(round.number) || 0)) + 1;
     try {
       const round = await api.createRound(seasonId, { number: nextNumber });
-      setRounds((prev) => [...prev, round].sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0)));
+      // La respuesta del POST de ronda NO trae la season poblada. Recargamos la
+      // lista para que la Ronda nueva sí incluya season.baseEloByPlayer y el
+      // court enseñe la base de pretemporada en las tarjetas, no el elo actual.
+      const reloaded = await api.getRounds(seasonId);
+      setRounds(
+        [...reloaded].sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0))
+      );
       setRoundId(round._id);
       setError(null);
       setNotice(`Ronda ${round.number} creada correctamente.`);

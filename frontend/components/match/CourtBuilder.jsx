@@ -93,20 +93,24 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
 
   const isComplete = SLOT_IDS.every((id) => slots[id]);
 
+  // Misma regla que el backend: durante TODA la temporada se trabaja contra la
+  // base de PRETEMPORADA (season.baseEloByPlayer), NO contra el currentElo
+  // acumulado. El snapshot se captura al crear la temporada y queda fijo para
+  // todos los partidos, así lo ganado/perdido en la Ronda 1 no aparece en la
+  // Ronda 2. Este mismo Elo es el que enseñan las tarjetas y los huecos.
+  const seasonBaseByPlayer = round.season?.baseEloByPlayer;
+  const eloForCard = (id) =>
+    seasonBaseByPlayer?.[id] ??
+    seasonBaseByPlayer?.get?.(id) ??
+    playersById[id]?.currentElo ??
+    0;
+
   const preview = useMemo(() => {
     if (!isComplete) return null;
-    // Misma regla que el backend: el preview de la Ronda 2 se calcula contra la
-    // base de PRETEMPORADA de la temporada (season.baseEloByPlayer), NO contra
-    // el currentElo acumulado. El snapshot se captura al crear la temporada y
-    // queda fijo para todos los partidos, así lo ganado/perdido en la Ronda 1
-    // no se tiene en cuenta en la Ronda 2.
-    const baseByPlayer = round.season?.baseEloByPlayer;
-    const resolveElo = (id) =>
-      baseByPlayer?.[id] ?? baseByPlayer?.get?.(id) ?? playersById[id]?.currentElo;
-    const teamAElos = [slots['a-0'], slots['a-1']].map(resolveElo);
-    const teamBElos = [slots['b-0'], slots['b-1']].map(resolveElo);
+    const teamAElos = [slots['a-0'], slots['a-1']].map(eloForCard);
+    const teamBElos = [slots['b-0'], slots['b-1']].map(eloForCard);
     return previewMatch(teamAElos, teamBElos);
-  }, [isComplete, slots, playersById, round.season?.baseEloByPlayer]);
+  }, [isComplete, slots, playersById, seasonBaseByPlayer]);
 
   function assign(slotId, playerId) {
     setSlots((prev) => {
@@ -243,6 +247,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
               id="a-0"
               team="a"
               player={playersById[slots['a-0']]}
+              elo={eloForCard(slots['a-0'])}
               onClickEmpty={handleClickEmptySlot}
               onRemove={removeFromSlot}
             />
@@ -250,6 +255,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
               id="a-1"
               team="a"
               player={playersById[slots['a-1']]}
+              elo={eloForCard(slots['a-1'])}
               onClickEmpty={handleClickEmptySlot}
               onRemove={removeFromSlot}
             />
@@ -265,6 +271,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
               id="b-0"
               team="b"
               player={playersById[slots['b-0']]}
+              elo={eloForCard(slots['b-0'])}
               onClickEmpty={handleClickEmptySlot}
               onRemove={removeFromSlot}
             />
@@ -272,6 +279,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
               id="b-1"
               team="b"
               player={playersById[slots['b-1']]}
+              elo={eloForCard(slots['b-1'])}
               onClickEmpty={handleClickEmptySlot}
               onRemove={removeFromSlot}
             />
@@ -318,6 +326,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
                 <PlayerCard
                   key={player._id}
                   player={player}
+                  elo={eloForCard(player._id)}
                   selected={selectedPlayerId === player._id}
                   onSelect={handleSelectPlayer}
                 />

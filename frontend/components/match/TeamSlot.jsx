@@ -7,6 +7,7 @@ export default function TeamSlot({
   id,
   team, // 'a' | 'b'
   player,
+  elo,
   onClickEmpty,
   onRemove,
 }) {
@@ -27,7 +28,7 @@ export default function TeamSlot({
           <div>
             <div className="team-slot__name">{player.name}</div>
             <div className="team-slot__elo numeric">
-              {player.currentElo.toFixed(2)}
+              {(elo ?? player?.currentElo ?? 0).toFixed(2)}
             </div>
           </div>
           <button

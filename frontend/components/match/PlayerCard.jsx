@@ -5,7 +5,7 @@ import { useDraggable } from '@dnd-kit/core';
 // (selección) para que quien no pueda arrastrar (teclado, torpeza táctil)
 // pueda igualmente montar el partido: se selecciona la carta y luego se
 // pulsa un hueco vacío en la pista.
-export default function PlayerCard({ player, selected, onSelect, dimmed }) {
+export default function PlayerCard({ player, selected, onSelect, dimmed, elo }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `pool-${player._id}`,
@@ -34,7 +34,7 @@ export default function PlayerCard({ player, selected, onSelect, dimmed }) {
     >
       <span className="player-card__name">{player.name}</span>
       <span className="player-card__elo numeric">
-        {player.currentElo.toFixed(2)}
+        {(elo ?? player.currentElo).toFixed(2)}
       </span>
     </button>
   );

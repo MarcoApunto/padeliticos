@@ -153,7 +153,7 @@ function MatchRow({ match }) {
             {Math.round((match.teamA.winProbability || 0) * 100)}% –{' '}
             {Math.round((match.teamB.winProbability || 0) * 100)}%
           </span>
-          {match.score && (
+          {match.score?.teamA != null && (
             <span className="match-row__score numeric">
               {match.score.teamA} – {match.score.teamB}
             </span>

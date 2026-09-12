@@ -39,7 +39,7 @@ export default function MatchHistoryList({ entries }) {
                 {match?.round?.season?.name || entry.season?.name}
                 {match?.round ? ` · Ronda ${match.round.number}` : ''}
                 {match?.number ? ` · Partido ${match.number}` : ''}
-                {match?.score ? ` · Marcador ${match.score.teamA}–${match.score.teamB}` : ''}
+                {match?.score?.teamA != null ? ` · Marcador ${match.score.teamA}–${match.score.teamB}` : ''}
               </span>
               <span className="match-history__badge" data-result={match?.won ? 'win' : 'loss'}>
                 {match?.won ? 'Victoria' : 'Derrota'}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 function colorForId(id) {
   let hash = 0;
@@ -10,6 +10,11 @@ const MIN_W = 640;
 const PAD_X = 24;
 const PAD_Y = 20;
 const PAD_TOP_LABELS = 18;
+// Debajo de esta Y el tooltip se gira hacia abajo para no cortarse arriba.
+const TIP_FLIP_LIMIT = 140;
+// Cota de seguridad: aunque no se haya medido aún un tooltip, nunca se clampará
+// a menos de TIP_FALLBACK px de los bordes.
+const TIP_FALLBACK = 264;
 
 // Semana (columna) a la que pertenece un paso: la temporada cuyo marker es el
 // mayor `order` ≤ t. Las `t` son índices secuenciales globales (rankMap) y los
@@ -29,6 +34,8 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
   const [hover, setHover] = useState(null);
   const [viewportW, setViewportW] = useState(0);
   const [weekIndex, setWeekIndex] = useState(0);
+  const [tipWidth, setTipWidth] = useState(0);
+  const tooltipRef = useRef(null);
   const validSeries = series.filter((entry) => entry.points.length >= 2);
   const isMulti = validSeries.length > 1;
   // En la vista general (Todos) la gráfica es más grande.
@@ -123,6 +130,42 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
 
   const y = (elo) => H - PAD_Y - ((elo - yMin) / (yMax - yMin || 1)) * (H - chartTop - PAD_Y);
 
+  const hoveredSeries = hover && validSeries.find((entry) => entry.id === hover.seriesId);
+  const hoveredPoint =
+    hoveredSeries && hover.pointIndex != null
+      ? hoveredSeries.points[hover.pointIndex]
+      : null;
+
+  // Mide el ancho real de la tarjeta (nowrap) para clamparla sin cortar nombres.
+  useLayoutEffect(() => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    setTipWidth((prev) => (Math.abs(w - prev) > 1 ? w : prev));
+  }, [hoveredPoint, hover, viewportW]);
+
+  // Posición del tooltip "a prueba de recortes": clampa la X dentro de la
+  // ventana visible del scroller según el ancho medido y gira hacia abajo si
+  // el nodo está arriba.
+  const tipStyle = hover
+    ? (() => {
+        const winLeft = scrollerRef.current?.scrollLeft || 0;
+        const winWidth = viewportW || MIN_W;
+        const width = tipWidth || TIP_FALLBACK;
+        const half = Math.min(width, winWidth - 16) / 2 + 8;
+        const clampedX = Math.max(
+          winLeft + half,
+          Math.min(hover.x, winLeft + winWidth - half)
+        );
+        return {
+          left: `${(clampedX / W) * 100}%`,
+          top: `${(hover.y / H) * 100}%`,
+          transform:
+            hover.y < TIP_FLIP_LIMIT ? 'translate(-50%, 18px)' : undefined,
+        };
+      })()
+    : null;
+
   if (validSeries.length === 0) {
     return <p className="text-muted">Necesitas al menos un partido jugado para ver la progresión.</p>;
   }
@@ -144,12 +187,6 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
     }
     setHover(best && best.distance < 40 ? best : null);
   }
-
-  const hoveredSeries = hover && validSeries.find((entry) => entry.id === hover.seriesId);
-  const hoveredPoint =
-    hoveredSeries && hover.pointIndex != null
-      ? hoveredSeries.points[hover.pointIndex]
-      : null;
 
   return (
     <>
@@ -210,7 +247,30 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
             <span key={`snap-${i}`} className="elo-chart__snap" style={{ left: i * weekPx }} aria-hidden />
           ))}
 
-          {hoveredPoint && <div className="elo-chart__tooltip" style={{ left: `${(hover.x / W) * 100}%`, top: `${(hover.y / H) * 100}%` }}><strong style={{ color: isMulti ? colorForId(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong><span className="numeric">{hoveredPoint.elo.toFixed(2)}</span></div>}
+          {hoveredPoint && (
+            <div className="elo-chart__tooltip" ref={tooltipRef} style={tipStyle}>
+              <strong style={{ color: isMulti ? colorForId(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong>
+              {hoveredPoint.match ? (
+                <>
+                  <span className="elo-chart__tooltip-vs">
+                    {hoveredPoint.match.partners.length > 0 ? `Con ${hoveredPoint.match.partners.join(' + ')} · ` : ''}vs {hoveredPoint.match.opponents.join(' + ') || '—'}
+                  </span>
+                  <span className="elo-chart__tooltip-result" data-result={hoveredPoint.match.won ? 'win' : 'loss'}>
+                    {hoveredPoint.match.won ? 'Victoria' : 'Derrota'}
+                    {hoveredPoint.match.score?.teamA != null ? ` · ${hoveredPoint.match.score.teamA}–${hoveredPoint.match.score.teamB}` : ''}
+                  </span>
+                  <span className="elo-chart__tooltip-elo numeric">
+                    {hoveredPoint.match.eloBefore.toFixed(2)} → {hoveredPoint.elo.toFixed(2)}
+                    <b data-result={hoveredPoint.match.won ? 'win' : 'loss'}>
+                      {' '}{hoveredPoint.match.won ? '+' : ''}{(hoveredPoint.elo - hoveredPoint.match.eloBefore).toFixed(2)}
+                    </b>
+                  </span>
+                </>
+              ) : (
+                <span className="numeric">{hoveredPoint.elo.toFixed(2)}</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

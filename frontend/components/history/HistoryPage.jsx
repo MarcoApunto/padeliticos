@@ -47,6 +47,18 @@ function toSeries(player, history, seasonOrderMap, rankMap) {
     t: rankMap.get(key),
     elo: entry.eloAfter,
     won: entry.match?.won,
+    match: {
+      won: entry.match?.won,
+      season: entry.match.round?.season?.name || entry.season?.name,
+      round: entry.match.round?.number,
+      number: entry.match.number,
+      playedAt: entry.match.playedAt,
+      partners: entry.match.partner ? [entry.match.partner.name] : [],
+      opponents: (entry.match.opponents || []).map((opponent) => opponent.name),
+      score: entry.match.score,
+      eloBefore: entry.eloBefore,
+      eloAfter: entry.eloAfter,
+    },
   }));
   return { id: player._id, name: player.name, points: [initial, ...rest] };
 }

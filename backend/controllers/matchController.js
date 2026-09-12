@@ -4,7 +4,7 @@ import Round from '../models/Round.js';
 import Season from '../models/Season.js';
 import Player from '../models/Player.js';
 import EloHistory from '../models/EloHistory.js';
-import { computePreMatch, computeFinalElos, ELO_K_FACTOR } from '../services/eloService.js';
+import { computePreMatch, computeFinalElos, ELO_K_FACTOR, clampElo } from '../services/eloService.js';
 import { rebuildRatings } from '../services/ratingService.js';
 import { HttpError } from '../errors.js';
 
@@ -49,7 +49,16 @@ function normalizeScore(score, winner) {
 // Valida el número de partido y las dos parejas, carga a los jugadores y
 // calcula los campos previos (media, probabilidad, diferencia de elo).
 // Reutilizado por create y updatePending para no duplicar lógica.
-async function resolveTeamData(number, teamA, teamB) {
+//
+// IMPORTANTE (regla del Excel): el Elo de referencia de los partidos NO es el
+// currentElo acumulado (que progresaría ronda a ronda), sino la base FIJA de
+// PRETEMPORADA de la temporada (season.baseEloByPlayer). El snapshot se captura
+// al CREAR la temporada (= lo acumulado de la temporada anterior). Así la
+// Ronda 2 se calcula contra la misma base que la Ronda 1: lo ganado o perdido
+// en la Ronda 1 NO se tiene en cuenta en la Ronda 2. currentElo (del jugador)
+// sigue acumulando los deltas para el ranking y para ser la base de la
+// siguiente temporada.
+async function resolveTeamData(number, teamA, teamB, baseEloByPlayer) {
   if (
     !Number.isInteger(Number(number)) ||
     Number(number) < 1 ||
@@ -70,7 +79,17 @@ async function resolveTeamData(number, teamA, teamB) {
   if (players.length !== 4) {
     throw new HttpError(400, 'Alguno de los jugadores no existe');
   }
-  const eloById = Object.fromEntries(players.map((player) => [player.id, player.currentElo]));
+
+  // Elo de referencia: base de PRETEMPORADA de la temporada. Si un jugador no
+  // tiene snapshot (temporada antigua creada sin base o jugador dado de alta a
+  // mitad de temporada), se usa su currentElo como base de cálculo; así nunca
+  // se rompe la vista ni el cálculo para datos antiguos.
+  const eloById = Object.fromEntries(
+    players.map((player) => {
+      const base = baseEloByPlayer?.get?.(player.id) ?? baseEloByPlayer?.[player.id];
+      return [player.id, base ?? player.currentElo];
+    })
+  );
 
   const teamAElos = teamA.players.map((id) => eloById[id]);
   const teamBElos = teamB.players.map((id) => eloById[id]);
@@ -150,11 +169,12 @@ export const getOne = async (req, res) => {
 export const create = async (req, res) => {
   const { number, teamA, teamB } = req.body;
 
-  const round = await Round.findById(req.params.roundId);
+  const round = await Round.findById(req.params.roundId).populate('season');
   if (!round) return res.status(404).json({ error: 'Ronda no encontrada' });
 
   try {
-    const data = await resolveTeamData(number, teamA, teamB);
+    const baseEloByPlayer = round.season?.baseEloByPlayer;
+    const data = await resolveTeamData(number, teamA, teamB, baseEloByPlayer);
     const match = await Match.create({ round: req.params.roundId, ...data });
 
     res.status(201).json(match);
@@ -182,7 +202,9 @@ export const updatePending = async (req, res) => {
   }
 
   try {
-    const data = await resolveTeamData(number, teamA, teamB);
+    const round = await Round.findById(match.round).populate('season');
+    const base = round?.season?.baseEloByPlayer;
+    const data = await resolveTeamData(number, teamA, teamB, base);
     match.number = data.number;
     match.teamA = data.teamA;
     match.teamB = data.teamB;
@@ -265,28 +287,47 @@ export const setResult = async (req, res) => {
         teamBNotes
       );
 
+      // Elo ACTUAL ("en vivo" acumulado) de los 4 jugadores, para sumar el
+      // delta de este partido encima y que el Historial muestre las sumas.
+      const playerIds = [
+        ...match.teamA.players.map(String),
+        ...match.teamB.players.map(String),
+      ];
+      const currentPlayers = await Player.find({ _id: { $in: playerIds } }).session(
+        session
+      );
+      const currentEloByPlayer = new Map(
+        currentPlayers.map((player) => [player.id, player.currentElo])
+      );
+
+      // El delta de cada jugador sale de la base FIJA de pretemporada
+      // (match.eloBefore), pero el Elo que se persiste es ACTUAL + delta.
+      const acumular = (ids, beforeElos, finalElos) =>
+        ids.map((id, i) => {
+          const antes = currentEloByPlayer.get(id) ?? beforeElos[i];
+          const despues = clampElo(antes + (finalElos[i] - beforeElos[i]));
+          return { playerId: id, eloBefore: antes, eloAfter: despues };
+        });
+      const updatesA = acumular(
+        match.teamA.players.map(String),
+        match.teamA.eloBefore,
+        teamAFinal
+      );
+      const updatesB = acumular(
+        match.teamB.players.map(String),
+        match.teamB.eloBefore,
+        teamBFinal
+      );
+      const updates = [...updatesA, ...updatesB];
+
       match.winner = winner;
       match.playedAt = new Date();
-      match.teamA.eloAfter = teamAFinal;
-      match.teamB.eloAfter = teamBFinal;
+      match.teamA.eloAfter = updatesA.map((update) => update.eloAfter);
+      match.teamB.eloAfter = updatesB.map((update) => update.eloAfter);
       if (teamANotes !== undefined) match.teamA.notes = normalizeNotes(teamANotes);
       if (teamBNotes !== undefined) match.teamB.notes = normalizeNotes(teamBNotes);
       if (score !== undefined) match.score = normalizeScore(score, winner);
       await match.save({ session });
-
-      // Actualiza el elo "en vivo" de cada jugador + registra el historial.
-      const updates = [
-        ...match.teamA.players.map((playerId, i) => ({
-          playerId,
-          eloBefore: match.teamA.eloBefore[i],
-          eloAfter: teamAFinal[i],
-        })),
-        ...match.teamB.players.map((playerId, i) => ({
-          playerId,
-          eloBefore: match.teamB.eloBefore[i],
-          eloAfter: teamBFinal[i],
-        })),
-      ];
 
       for (const u of updates) {
         await Player.findByIdAndUpdate(
@@ -318,18 +359,4 @@ export const setResult = async (req, res) => {
   } finally {
     session.endSession();
   }
-};
-
-// DELETE /api/matches/:id
-// Solo se permite borrar partidos SIN resultado, para no descuadrar el ranking.
-export const remove = async (req, res) => {
-  const match = await Match.findById(req.params.id);
-  if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
-  if (match.winner) {
-    return res.status(409).json({
-      error: 'No se puede borrar un partido ya jugado (afectaría al ranking)',
-    });
-  }
-  await match.deleteOne();
-  res.status(204).send();
 };

@@ -42,15 +42,10 @@ export const removePlayer = async (req, res) => {
 };
 
 export const updateSeason = async (req, res) => {
-  const { name, startDate, endDate, closed } = req.body;
+  const { name } = req.body;
   const season = await Season.findByIdAndUpdate(
     req.params.id,
-    {
-      ...(name !== undefined && { name }),
-      ...(startDate !== undefined && { startDate }),
-      ...(endDate !== undefined && { endDate }),
-      ...(closed !== undefined && { closed }),
-    },
+    { ...(name !== undefined && { name }) },
     { new: true, runValidators: true }
   );
   if (!season) return res.status(404).json({ error: 'Temporada no encontrada' });

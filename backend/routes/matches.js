@@ -10,6 +10,5 @@ router.put('/:id', ctrl.updatePending);
 // Fijar o corregir el resultado altera el Elo: solo con clave de admin.
 router.put('/:id/result', adminAuth, ctrl.updateResult);
 router.patch('/:id/result', adminAuth, ctrl.setResult);
-router.delete('/:id', ctrl.remove);
 
 export default router;

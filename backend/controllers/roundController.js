@@ -2,9 +2,12 @@ import Round from '../models/Round.js';
 
 // GET /api/seasons/:seasonId/rounds
 export const getAllForSeason = async (req, res) => {
-  const rounds = await Round.find({ season: req.params.seasonId }).sort({
-    number: 1,
-  });
+  // Poblamos la season para que el cliente (CourtBuilder) tenga disponible la
+  // baseEloByPlayer de PRETEMPORADA y pueda previsualizar la Ronda 2 igual que
+  // el backend: cada jugador contra SU base fija, nunca contra el elo actual.
+  const rounds = await Round.find({ season: req.params.seasonId })
+    .populate('season', 'name baseEloByPlayer')
+    .sort({ number: 1 });
   res.json(rounds);
 };
 

@@ -176,7 +176,6 @@ export {
   ELO_MIN,
   ELO_MAX,
   ELO_K_FACTOR,
-  PARTNER_WEIGHT,
   clampElo,
   teamWinProbability,
   playerWinProbability,

@@ -23,7 +23,7 @@ function normalizeNotes(notes) {
   return notes;
 }
 
-// Valida el marcador por sets (opcional). Si viene, no puede ser empate y
+// Valida el marcador por puntos (opcional). Si viene, no puede ser empate y
 // debe corresponderse con el ganador.
 function normalizeScore(score, winner) {
   if (score === undefined) return undefined;

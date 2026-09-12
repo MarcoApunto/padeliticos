@@ -37,7 +37,7 @@ const matchSchema = new Schema(
     number: { type: Number, required: true }, // "Partido 1", "Partido 2"...
     teamA: { type: teamSchema, required: true },
     teamB: { type: teamSchema, required: true },
-    // Marcador por sets (opcional): total de sets ganados por cada equipo.
+    // Marcador (opcional): puntos anotados por cada equipo, p. ej. 6 - 2.
     score: {
       teamA: { type: Number, min: 0, default: undefined },
       teamB: { type: Number, min: 0, default: undefined },

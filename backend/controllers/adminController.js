@@ -102,7 +102,7 @@ export const removeMatch = async (req, res) => {
   const hadResult = Boolean(match.winner);
   const removedId = match._id;
   await match.deleteOne();
-  if (hadResult) await rebuildRatings([removedId]);
+  if (hadResult) await rebuildRatingsFromDb([removedId]);
   res.status(204).send();
 };
 

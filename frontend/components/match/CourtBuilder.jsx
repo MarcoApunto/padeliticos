@@ -210,6 +210,18 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     }
   }
 
+  async function openMatch(selected) {
+    try {
+      const freshMatches = await api.getMatches(round._id);
+      setMatches(freshMatches);
+      const fresh = freshMatches.find((item) => item._id === selected._id) || selected;
+      setMatch(fresh);
+    } catch (err) {
+      setError(err.message);
+      setMatch(selected);
+    }
+  }
+
   const availablePlayers = players.filter(
     (player) => !usedPlayerIds.has(player._id) && !reservedPlayerIds.has(player._id)
   );
@@ -284,7 +296,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
           <RoundMatches
             matches={matches}
             loading={matchesLoading}
-            onSelect={setMatch}
+            onSelect={openMatch}
             onEdit={startEditingMatch}
           />
         )}
@@ -371,6 +383,11 @@ function RoundMatches({ matches, loading, onSelect, onEdit }) {
                 <div>
                   <div className="round-match__head">
                     <strong>Partido {match.number}</strong>
+                    {match.score && (
+                      <span className="round-match__score numeric">
+                        {match.score.teamA} – {match.score.teamB}
+                      </span>
+                    )}
                   </div>
                   <div className="round-match__lineup">
                     {sides.map((side, index) => {

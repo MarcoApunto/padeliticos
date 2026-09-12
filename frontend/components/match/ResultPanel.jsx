@@ -3,18 +3,19 @@ import { previewFinalElo, ELO_K_FACTOR } from '../../utils/elo.js';
 
 // Se muestra una vez el partido ya existe en el backend (con media, diferencia
 // y probabilidad calculadas). Aquí solo falta declarar quién ganó y, si se
-// quiere, la nota (0-10) de cada jugador y el marcador por sets. Al confirmar,
+// quiere, la nota (0-10) de cada jugador y el marcador por puntos. Al confirmar,
 // se cierra el partido vía PATCH /matches/:id/result, que es donde el servidor
 // calcula y persiste el elo final de verdad.
 export default function ResultPanel({ match, onConfirm, saving }) {
   const [winner, setWinner] = useState(match.winner || null);
+  const [adminKey, setAdminKey] = useState('');
   const [notes, setNotes] = useState({
     a: match.teamA.notes || [undefined, undefined],
     b: match.teamB.notes || [undefined, undefined],
   });
   const [score, setScore] = useState({
-    teamA: match.score?.teamA ?? '',
-    teamB: match.score?.teamB ?? '',
+    a: match.score?.teamA ?? '',
+    b: match.score?.teamB ?? '',
   });
 
   const teamAElos = match.teamA.eloBefore;
@@ -49,8 +50,8 @@ export default function ResultPanel({ match, onConfirm, saving }) {
     setScore((prev) => ({ ...prev, [team]: value === '' ? '' : value }));
   };
 
-  const scoreComplete = score.teamA !== '' && score.teamB !== '';
-  const halfScore = (score.teamA === '') !== (score.teamB === '');
+  const scoreComplete = score.a !== '' && score.b !== '';
+  const halfScore = (score.a === '') !== (score.b === '');
 
   return (
     <div className="result-panel">
@@ -89,8 +90,8 @@ export default function ResultPanel({ match, onConfirm, saving }) {
         })}
       </div>
 
-      <details className="result-panel__notes">
-        <summary>Marcador por sets (opcional)</summary>
+      <div className="result-panel__score">
+        <div className="result-panel__score-label">Marcador por puntos</div>
         <div className="result-panel__score-row">
           {['a', 'b'].map((team) => {
             const teamData = team === 'a' ? match.teamA : match.teamB;
@@ -101,7 +102,7 @@ export default function ResultPanel({ match, onConfirm, saving }) {
                   type="number"
                   min={0}
                   placeholder="0"
-                  aria-label={`Sets de ${teamData.players.map((p) => p.name).join(' + ')}`}
+                  aria-label={`Puntos de ${teamData.players.map((p) => p.name).join(' + ')}`}
                   value={score[team]}
                   onChange={(e) => updateScore(team, e.target.value)}
                 />
@@ -111,7 +112,7 @@ export default function ResultPanel({ match, onConfirm, saving }) {
         </div>
         {scoreComplete && (
           <p className="result-panel__score-hint">
-            {score.teamA} – {score.teamB} {winner ? `para el equipo ${winner === 1 ? 'A' : 'B'}` : ''}
+            {score.a} – {score.b} {winner ? `para el equipo ${winner === 1 ? 'A' : 'B'}` : ''}
           </p>
         )}
         {halfScore && (
@@ -119,7 +120,7 @@ export default function ResultPanel({ match, onConfirm, saving }) {
             Rellena el marcador de los dos equipos o déjalo vacío.
           </p>
         )}
-      </details>
+      </div>
 
       <details className="result-panel__notes">
         <summary>Añadir nota por jugador (opcional, 0-10)</summary>
@@ -145,22 +146,34 @@ export default function ResultPanel({ match, onConfirm, saving }) {
         })}
       </details>
 
+      <label className="result-panel__key">
+        Clave de administrador
+        <input
+          type="password"
+          value={adminKey}
+          onChange={(e) => setAdminKey(e.target.value)}
+          placeholder="Obligatoria para guardar"
+          autoComplete="off"
+        />
+      </label>
+
       <button
         type="button"
         className="result-panel__confirm"
-        disabled={!winner || saving || halfScore}
+        disabled={!winner || saving || halfScore || !adminKey}
         onClick={() =>
           onConfirm({
             winner,
             teamANotes: notes.a.some((n) => n !== undefined) ? notes.a : undefined,
             teamBNotes: notes.b.some((n) => n !== undefined) ? notes.b : undefined,
             score: scoreComplete
-              ? { teamA: Number(score.teamA), teamB: Number(score.teamB) }
+              ? { teamA: Number(score.a), teamB: Number(score.b) }
               : undefined,
+            adminKey,
           })
         }
       >
-        {saving ? 'Guardando…' : match.winner ? 'Guardar cambios' : 'Confirmar resultado'}
+      {saving ? 'Guardando…' : match.winner ? 'Guardar cambios' : 'Confirmar resultado'}
       </button>
     </div>
   );

@@ -61,16 +61,28 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  updateMatchResult: (matchId, data) =>
-    request(`/matches/${matchId}/result`, {
+  updateMatchResult: (matchId, data) => {
+    const { adminKey, ...body } = data;
+    return request(`/matches/${matchId}/result`, {
       method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  setMatchResult: (matchId, data) =>
-    request(`/matches/${matchId}/result`, {
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(adminKey ? { 'x-admin-key': adminKey } : {}),
+      },
+    });
+  },
+  setMatchResult: (matchId, data) => {
+    const { adminKey, ...body } = data;
+    return request(`/matches/${matchId}/result`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(adminKey ? { 'x-admin-key': adminKey } : {}),
+      },
+    });
+  },
   deleteMatch: (id) => request(`/matches/${id}`, { method: 'DELETE' }),
 
   admin: {

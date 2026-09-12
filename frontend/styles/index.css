@@ -180,9 +180,75 @@ button {
   
 
 /* Styles from EloProgressionChart.jsx */
-
-        .elo-chart { position: relative; }
-        .elo-chart svg { width: 100%; height: auto; display: block; cursor: crosshair; }
+.elo-chart__scroller {
+          width: 100%;
+          overflow-x: auto;
+          overscroll-behavior-x: contain;
+          padding-bottom: 10px;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: thin;
+          scrollbar-color: var(--surface-raised) transparent;
+        }
+        .elo-chart__scroller::-webkit-scrollbar { height: 10px; }
+        .elo-chart__scroller::-webkit-scrollbar-track { background: transparent; }
+        .elo-chart__scroller::-webkit-scrollbar-thumb {
+          background: var(--surface-raised);
+          border-radius: 999px;
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+        .elo-chart__scroller::-webkit-scrollbar-thumb:hover {
+          background: var(--accent-dim);
+          background-clip: padding-box;
+        }
+        .elo-chart__nav {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-bottom: 8px;
+        }
+        .elo-chart__nav-label {
+          font-size: 12px;
+          color: var(--text-muted);
+        }
+        .elo-chart__arrow {
+          width: 34px;
+          height: 34px;
+          border-radius: var(--radius-sm);
+          border: 1px solid rgba(237, 235, 222, 0.2);
+          background: transparent;
+          color: var(--accent);
+          font-size: 16px;
+          line-height: 1;
+          cursor: pointer;
+          display: grid;
+          place-items: center;
+          transition: border-color 120ms ease, background 120ms ease;
+        }
+        .elo-chart__arrow:hover:not(:disabled) {
+          border-color: var(--accent);
+          background: rgba(198, 241, 53, 0.08);
+        }
+        .elo-chart__arrow:disabled { opacity: 0.3; cursor: default; }
+        .elo-chart {
+          position: relative;
+          min-width: 100%;
+        }
+        .elo-chart__snap {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          pointer-events: none;
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
+        }
+        .elo-chart svg {
+          width: 100%;
+          height: auto;
+          display: block;
+          cursor: crosshair;
+        }
         .elo-chart__tooltip { position: absolute; transform: translate(-50%, -130%); background: var(--surface-raised); border: 1px solid rgba(237, 235, 222, 0.15); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; white-space: nowrap; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
         .elo-chart__legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
         .elo-chart__legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
@@ -482,6 +548,7 @@ button {
           align-items: baseline;
           gap: 10px;
         }
+        .round-match__score { color: var(--text-muted); font-size: 12px !important; }
         .round-match__lineup {
           display: flex;
           flex-wrap: wrap;
@@ -626,6 +693,21 @@ button {
           background: var(--surface-raised);
           color: var(--text-muted);
           cursor: not-allowed;
+        }
+        .result-panel__key {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-top: 14px;
+          font-size: 12px;
+          color: var(--text-muted);
+        }
+        .result-panel__key input {
+          padding: 8px 10px;
+          border-radius: var(--radius-sm);
+          border: 1px solid rgba(237, 235, 222, 0.2);
+          background: var(--bg);
+          color: var(--text);
         }
       
 
@@ -1151,14 +1233,24 @@ button {
   .net__probs [data-team='a'] { color: var(--team-a); }
   .net__probs [data-team='b'] { color: var(--team-b); }
 
-/* Marcador por sets en el panel de resultado */
+/* Marcador por puntos en el panel de resultado */
 
-  .result-panel__notes-row + .result-panel__score-row { margin-top: 10px; }
+  .result-panel__score {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(237, 235, 222, 0.15);
+    background: var(--surface-raised);
+  }
+  .result-panel__score-label {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
   .result-panel__score-row {
     display: flex;
     gap: 14px;
     flex-wrap: wrap;
-    margin-top: 10px;
   }
   .result-panel__score-field {
     display: flex;

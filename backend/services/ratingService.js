@@ -121,10 +121,17 @@ export async function rebuildRatings(removedMatchIds = []) {
       match.teamB.winProbability = pre.teamB.winProbability;
       match.eloDifference = pre.eloDifference;
 
-      // La probabilidad y el DELTA de cada jugador salen de la base FIJA
-      // (teamAFinal ya es "base + delta"). Pero el Elo que se persiste y se
-      // acumula es el ACTUAL + deltas, para que el Historial muestre las sumas
-      // correctas: 2.48 → 2.72 (R1) → 2.79 (R2), jamás un retroceso a 2.48.
+      // El resultado del PARTIDO (eloBefore/eloAfter de la Match) se ancla a la
+      // base FIJA de pretemporada: en todas las rondas de la temporada aparece
+      // el mismo eloBefore (2.00) y su delta (2.00 → 2.24). teamAFinal ya es
+      // "base + delta" con el clamp [0.5, 7] aplicado.
+      match.teamA.eloAfter = teamAFinal;
+      match.teamB.eloAfter = teamBFinal;
+      await match.save();
+
+      // El HISTORIAL y el Elo "en vivo", en cambio, SÍ acumulan los deltas
+      // (sin retrocesos a la base), clampeados al rango: R1 2.00→1.78, luego
+      // R2 1.78→2.02... El acumulado final es la base de la próxima temporada.
       const acumular = (ids, beforeElos, finalElos) => {
         const salida = [];
         ids.forEach((id, i) => {
@@ -137,10 +144,6 @@ export async function rebuildRatings(removedMatchIds = []) {
       };
       const histA = acumular(teamAIds, teamAElos, teamAFinal);
       const histB = acumular(teamBIds, teamBElos, teamBFinal);
-
-      match.teamA.eloAfter = histA.map((hist) => hist.despues);
-      match.teamB.eloAfter = histB.map((hist) => hist.despues);
-      await match.save();
 
       teamAIds.forEach((playerId, index) => {
         histories.push({

@@ -320,14 +320,19 @@ export const setResult = async (req, res) => {
       );
       const updates = [...updatesA, ...updatesB];
 
+      // Resultado del PARTIDO anclado a la base FIJA (2.00 → 2.24): el DELTA
+      // sale de la base de pretemporada (match.eloBefore), no del acumulado.
       match.winner = winner;
       match.playedAt = new Date();
-      match.teamA.eloAfter = updatesA.map((update) => update.eloAfter);
-      match.teamB.eloAfter = updatesB.map((update) => update.eloAfter);
+      match.teamA.eloAfter = teamAFinal;
+      match.teamB.eloAfter = teamBFinal;
       if (teamANotes !== undefined) match.teamA.notes = normalizeNotes(teamANotes);
       if (teamBNotes !== undefined) match.teamB.notes = normalizeNotes(teamBNotes);
       if (score !== undefined) match.score = normalizeScore(score, winner);
       await match.save({ session });
+
+      // El HISTORIAL y currentElo SÍ acumulan los deltas (2.00 → 1.78 → 2.02),
+      // clampeados al rango. Ese acumulado final es la base de la próxima season.
 
       for (const u of updates) {
         await Player.findByIdAndUpdate(

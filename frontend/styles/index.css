@@ -1123,6 +1123,23 @@ button {
 /* Styles from RankingPage.jsx */
 
         .ranking h2 { margin-bottom: 4px; }
+        .ranking__header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 8px;
+        }
+        .ranking__header select {
+          min-width: 0;
+          background: var(--surface-raised);
+          color: var(--text);
+          border: 1px solid rgba(237, 235, 222, 0.15);
+          border-radius: var(--radius-sm);
+          padding: 8px 12px;
+          font-size: 13px;
+        }
         .ranking > p { margin-bottom: 20px; font-size: 13px; }
         .ranking__list {
           list-style: none;
@@ -1179,6 +1196,9 @@ button {
           text-align: right;
           color: var(--accent);
           font-size: 14px;
+        }
+        .ranking__row[data-inactive] {
+          opacity: 0.5;
         }
       
 
@@ -1287,5 +1307,103 @@ button {
     display: block;
     margin-top: 2px;
     color: var(--text);
+  }
+
+/* Styles from BetsPage.jsx */
+
+  .bets-page { display: flex; flex-direction: column; gap: 16px; }
+  .bets-page h2 { margin-bottom: 4px; }
+  .bets-page > p { margin: 0 0 4px; font-size: 13px; }
+  .bets-page__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .bets-page__error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-md);
+    color: var(--danger);
+  }
+  .bets-page__error p { margin: 0; }
+  .bets-page__error button {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--danger);
+  }
+  .bet-row {
+    padding: 14px 16px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+  }
+  .bet-row__meta {
+    display: flex;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .bet-row__board {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .bet-side {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid transparent;
+  }
+  .bet-side[data-team='a'] { border-color: var(--team-a-dim); }
+  .bet-side[data-team='b'] { border-color: var(--team-b-dim); }
+  .bet-side[data-favorite][data-team='a'] { border-color: var(--team-a); }
+  .bet-side[data-favorite][data-team='b'] { border-color: var(--team-b); }
+  .bet-side__line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .bet-side__name {
+    font-weight: 600;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .bet-side__cuota {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .bet-side__meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .bet-row__vs {
+    align-self: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  @media (max-width: 560px) {
+    .bet-row__board { grid-template-columns: 1fr; }
+    .bet-row__vs { text-align: center; }
   }
 

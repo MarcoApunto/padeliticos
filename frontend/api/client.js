@@ -49,6 +49,8 @@ export const api = {
     ).toString();
     return request(`/matches${queryString ? `?${queryString}` : ''}`);
   },
+  getPendingMatches: () => request('/matches?status=pending'),
+  getPairStats: () => request('/matches/pair-stats'),
   getMatches: (roundId) => request(`/rounds/${roundId}/matches`),
   createMatch: (roundId, data) =>
     request(`/rounds/${roundId}/matches`, {

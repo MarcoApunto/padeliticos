@@ -3,6 +3,7 @@ import Header from './components/layout/Header.jsx';
 import CourtBuilder from './components/match/CourtBuilder.jsx';
 import SeasonRoundPicker from './components/match/SeasonRoundPicker.jsx';
 import RankingPage from './components/ranking/RankingPage.jsx';
+import BetsPage from './components/bets/BetsPage.jsx';
 import HistoryPage from './components/history/HistoryPage.jsx';
 import MatchesPage from './components/matches/MatchesPage.jsx';
 import PlayersPage from './components/players/PlayersPage.jsx';
@@ -99,6 +100,8 @@ export default function App() {
       )}
 
       {!loading && !error && !adminOpen && tab === 'ranking' && <RankingPage players={players} />}
+
+      {!loading && !error && !adminOpen && tab === 'bets' && <BetsPage />}
 
       {!loading && !error && !adminOpen && tab === 'matches' && <MatchesPage />}
 

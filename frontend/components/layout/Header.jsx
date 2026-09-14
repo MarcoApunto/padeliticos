@@ -2,6 +2,7 @@ import React from 'react';
 
 const TABS = [
   { id: 'match', label: 'Nuevo partido' },
+  { id: 'bets', label: 'Apuestas' },
   { id: 'ranking', label: 'Ranking' },
   { id: 'matches', label: 'Partidos' },
   { id: 'history', label: 'Historial' },

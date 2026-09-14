@@ -6,6 +6,7 @@ import Player from '../models/Player.js';
 import EloHistory from '../models/EloHistory.js';
 import { computePreMatch, computeFinalElos, ELO_K_FACTOR, clampElo } from '../services/eloService.js';
 import { rebuildRatings } from '../services/ratingService.js';
+import { computePairStats } from '../services/matchStatsService.js';
 import { HttpError } from '../errors.js';
 
 // Valida las notas manuales (0-10) de un equipo. Sin notas = undefined.
@@ -126,23 +127,25 @@ export const getAllForRound = async (req, res) => {
   res.json(matches);
 };
 
-// GET /api/matches?seasonId=&roundId=
+// GET /api/matches?seasonId=&roundId=&status=
 // Historial global de partidos jugados, más recientes primero.
+// Con status=pending devuelve los partidos SIN resultado (para la vista de
+// apuestas/cuotas), ordenados por temporada → ronda → número de partido.
 export const getAll = async (req, res) => {
-  const { seasonId, roundId } = req.query;
+  const { seasonId, roundId, status } = req.query;
+  const pending = status === 'pending';
 
-  const filter = { winner: { $ne: null } };
+  const filter = pending ? { winner: null } : { winner: { $ne: null } };
   if (roundId) filter.round = roundId;
 
   let matches = await Match.find(filter)
-    .populate('teamA.players', 'name')
-    .populate('teamB.players', 'name')
+    .populate('teamA.players', 'name currentElo')
+    .populate('teamB.players', 'name currentElo')
     .populate({
       path: 'round',
       select: 'number season',
-      populate: { path: 'season', select: 'name' },
-    })
-    .sort({ playedAt: -1 });
+      populate: { path: 'season', select: 'name createdAt' },
+    });
 
   if (seasonId) {
     matches = matches.filter(
@@ -150,7 +153,35 @@ export const getAll = async (req, res) => {
     );
   }
 
+  matches.sort(
+    pending
+      ? (a, b) => {
+          const aSeason = new Date(
+            a.round?.season?.createdAt || 0
+          ).getTime();
+          const bSeason = new Date(
+            b.round?.season?.createdAt || 0
+          ).getTime();
+          return (
+            aSeason - bSeason ||
+            (a.round?.number || 0) - (b.round?.number || 0) ||
+            a.number - b.number
+          );
+        }
+      : (a, b) => new Date(b.playedAt) - new Date(a.playedAt)
+  );
+
   res.json(matches);
+};
+
+// GET /api/matches/pair-stats
+// Histórico (partidos, V/D) de cada PAREJA concreta en partidos ya jugados.
+// La clave es "idJugador1|idJugador2" con los ids ordenados.
+export const getPairStats = async (req, res) => {
+  const matches = await Match.find({ winner: { $ne: null } })
+    .select('winner teamA.players teamB.players')
+    .lean();
+  res.json(computePairStats(matches));
 };
 
 // GET /api/matches/:id

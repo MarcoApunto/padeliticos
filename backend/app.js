@@ -8,6 +8,7 @@ import seasonsRouter from './routes/seasons.js';
 import roundsRouter from './routes/rounds.js';
 import matchesRouter from './routes/matches.js';
 import adminRouter from './routes/admin.js';
+import betsRouter from './routes/bets.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use('/api/seasons', seasonsRouter);
 app.use('/api/rounds', roundsRouter);
 app.use('/api/matches', matchesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/bets', betsRouter);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

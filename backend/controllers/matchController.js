@@ -4,9 +4,11 @@ import Round from '../models/Round.js';
 import Season from '../models/Season.js';
 import Player from '../models/Player.js';
 import EloHistory from '../models/EloHistory.js';
+import Bet from '../models/Bet.js';
 import { computePreMatch, computeFinalElos, ELO_K_FACTOR, clampElo } from '../services/eloService.js';
 import { rebuildRatings } from '../services/ratingService.js';
 import { computePairStats } from '../services/matchStatsService.js';
+import { settleBetsForMatch } from '../services/betService.js';
 import { HttpError } from '../errors.js';
 
 // Valida las notas manuales (0-10) de un equipo. Sin notas = undefined.
@@ -241,6 +243,9 @@ export const updatePending = async (req, res) => {
     match.teamB = data.teamB;
     match.eloDifference = data.eloDifference;
     await match.save();
+    // Si cambian las parejas, las apuestas pendientes quedan sobre jugadores
+    // que ya no están en el partido: se anulan (el saldo deja de reservarse).
+    await Bet.deleteMany({ match: match._id, status: 'pending' });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'Ese número ya existe en la ronda' });
@@ -278,6 +283,9 @@ export const updateResult = async (req, res) => {
     match.playedAt = match.playedAt || new Date();
     await match.save();
     await rebuildRatings();
+    // Corregir el resultado re-liquida las apuestas con el nuevo ganador
+    // (settleBetsForMatch revierte la liquidación anterior antes de aplicar).
+    await settleBetsForMatch(match._id);
 
     const updated = await Match.findById(match._id)
       .populate('teamA.players', 'name currentElo')
@@ -361,6 +369,10 @@ export const setResult = async (req, res) => {
       if (teamBNotes !== undefined) match.teamB.notes = normalizeNotes(teamBNotes);
       if (score !== undefined) match.score = normalizeScore(score, winner);
       await match.save({ session });
+
+      // Liquidar las apuestas del partido dentro de la misma transacción: el
+      // saldo de los apostadores se mueve aquí mismo (won/lost).
+      await settleBetsForMatch(match._id, session);
 
       // El HISTORIAL y currentElo SÍ acumulan los deltas (2.00 → 1.78 → 2.02),
       // clampeados al rango. Ese acumulado final es la base de la próxima season.

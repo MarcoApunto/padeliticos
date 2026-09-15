@@ -1,11 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-function colorForId(id) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return `hsl(${hash % 360}, 70%, 62%)`;
-}
-
 const MIN_W = 640;
 const PAD_X = 24;
 const PAD_Y = 20;
@@ -38,6 +32,20 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
   const tooltipRef = useRef(null);
   const validSeries = series.filter((entry) => entry.points.length >= 2);
   const isMulti = validSeries.length > 1;
+
+  // Colores únicos y estables: se ordenan las series por id (determinista) y se
+  // reparten tonos con la proporción áurea, así cada jugador cae en un hue
+  // distinto y no se repite. El orden por id mantiene el color fijo entre
+  // renders aunque los jugadores cambien de puesto en el ranking.
+  const colorFor = useMemo(() => {
+    const byId = new Map();
+    [...validSeries]
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+      .forEach((entry, index) => {
+        byId.set(entry.id, `hsl(${Math.round((index * 137.508) % 360)}, 70%, 62%)`);
+      });
+    return (id) => byId.get(id) || 'var(--accent)';
+  }, [validSeries]);
   // En la vista general (Todos) la gráfica es más grande.
   const H = isMulti ? 440 : 350;
   const chartTop = seasonMarkers.length > 0 ? PAD_Y + PAD_TOP_LABELS : PAD_Y;
@@ -207,12 +215,12 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
               </g>
             ))}
             {validSeries.map((entry) => {
-              const color = isMulti ? colorForId(entry.id) : 'var(--accent)';
+              const color = isMulti ? colorFor(entry.id) : 'var(--accent)';
               const linePath = entry.points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(point.t).toFixed(1)} ${y(point.elo).toFixed(1)}`).join(' ');
               return <path key={entry.id} d={linePath} fill="none" stroke={color} strokeWidth={hover?.seriesId === entry.id ? 3.5 : isMulti ? 2.2 : 2.5} opacity={hover && hover.seriesId !== entry.id ? 0.25 : 1} style={{ transition: 'opacity 120ms ease' }} />;
             })}
             {validSeries.map((entry) => {
-              const seriesColor = isMulti ? colorForId(entry.id) : 'var(--accent)';
+              const seriesColor = isMulti ? colorFor(entry.id) : 'var(--accent)';
               const isDimmed = hover && hover.seriesId !== entry.id;
               return (
                 <g key={`dots-${entry.id}`} opacity={isDimmed ? 0.25 : 1}>
@@ -238,7 +246,7 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
                 </g>
               );
             })}
-            {hover && <><line x1={hover.x} x2={hover.x} y1={chartTop} y2={H - PAD_Y} stroke="rgba(237, 235, 222, 0.25)" strokeDasharray="3 3" /><circle cx={hover.x} cy={hover.y} r={6} fill={isMulti ? colorForId(hover.seriesId) : 'var(--accent)'} stroke="var(--bg)" strokeWidth="2" /></>}
+            {hover && <><line x1={hover.x} x2={hover.x} y1={chartTop} y2={H - PAD_Y} stroke="rgba(237, 235, 222, 0.25)" strokeDasharray="3 3" /><circle cx={hover.x} cy={hover.y} r={6} fill={isMulti ? colorFor(hover.seriesId) : 'var(--accent)'} stroke="var(--bg)" strokeWidth="2" /></>}
           </svg>
 
           {/* Puntos de anclaje del scroll: cada columna de semana alinea su
@@ -250,7 +258,7 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
           {hoveredPoint && (
             <div className="elo-chart__tooltip" ref={tooltipRef} style={tipStyle}>
               <span className="elo-chart__tooltip-title">
-                <strong style={{ color: isMulti ? colorForId(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong>
+                <strong style={{ color: isMulti ? colorFor(hover.seriesId) : 'var(--accent)' }}>{hoveredSeries.name}</strong>
                 {hoveredPoint.match && hoveredPoint.match.round != null ? (
                   <span className="elo-chart__tooltip-meta">· Ronda {hoveredPoint.match.round}</span>
                 ) : null}
@@ -279,7 +287,7 @@ export default function EloProgressionChart({ series, seasonMarkers = [] }) {
         </div>
       </div>
 
-      {isMulti && <div className="elo-chart__legend elo-chart__legend--multi">{validSeries.map((entry) => <span key={entry.id} data-dimmed={(hover && hover.seriesId !== entry.id) || undefined}><i style={{ background: colorForId(entry.id) }} />{entry.name}</span>)}</div>}
+      {isMulti && <div className="elo-chart__legend elo-chart__legend--multi">{validSeries.map((entry) => <span key={entry.id} data-dimmed={(hover && hover.seriesId !== entry.id) || undefined}><i style={{ background: colorFor(entry.id) }} />{entry.name}</span>)}</div>}
       {!isMulti && <div className="elo-chart__legend"><span><i data-dot="win" /> Victoria</span><span><i data-dot="loss" /> Derrota</span></div>}
     </>
   );

@@ -3,6 +3,7 @@ import Player from '../models/Player.js';
 import Round from '../models/Round.js';
 import Season from '../models/Season.js';
 import { rebuildRatings as rebuildRatingsFromDb } from '../services/ratingService.js';
+import { refundAndRemoveBets } from '../services/betService.js';
 
 export const check = (req, res) => res.json({ ok: true });
 
@@ -96,6 +97,11 @@ export const removeMatch = async (req, res) => {
   if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
   const hadResult = Boolean(match.winner);
   const removedId = match._id;
+
+  // Las apuestas de ese partido vuelven al estado previo: se revierte la
+  // liquidación ya aplicada y se borran las pendientes.
+  await refundAndRemoveBets(match._id);
+
   await match.deleteOne();
   if (hadResult) await rebuildRatingsFromDb([removedId]);
   res.status(204).send();

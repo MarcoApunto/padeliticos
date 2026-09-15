@@ -4,6 +4,7 @@ import CourtBuilder from './components/match/CourtBuilder.jsx';
 import SeasonRoundPicker from './components/match/SeasonRoundPicker.jsx';
 import RankingPage from './components/ranking/RankingPage.jsx';
 import BetsPage from './components/bets/BetsPage.jsx';
+import BetsZone from './components/bets/BetsZone.jsx';
 import HistoryPage from './components/history/HistoryPage.jsx';
 import MatchesPage from './components/matches/MatchesPage.jsx';
 import PlayersPage from './components/players/PlayersPage.jsx';
@@ -17,13 +18,15 @@ export default function App() {
   const [error, setError] = useState(null);
   const [round, setRound] = useState(null);
   const [toast, setToast] = useState(null);
-  const [adminOpen, setAdminOpen] = useState(
-    () => window.location.pathname === '/admin'
-  );
+  // Zonas ocultas, accesibles por URL: /admin y /apuestas.
+  const [route, setRoute] = useState(() => window.location.pathname);
+
+  const adminOpen = route === '/admin';
+  const betsOpen = route === '/apuestas';
 
   useEffect(() => {
     function handleNavigation() {
-      setAdminOpen(window.location.pathname === '/admin');
+      setRoute(window.location.pathname);
     }
     window.addEventListener('popstate', handleNavigation);
     return () => window.removeEventListener('popstate', handleNavigation);
@@ -58,8 +61,8 @@ export default function App() {
       <Header
         active={tab}
         onChange={setTab}
-        brand={adminOpen ? 'Super Padelitico' : 'Padeliticos'}
-        hideNavigation={adminOpen}
+        brand={adminOpen ? 'Super Padelitico' : betsOpen ? 'Padelitico Apuestas' : 'Padeliticos'}
+        hideNavigation={adminOpen || betsOpen}
       />
 
       {loading && <p className="text-muted">Cargando…</p>}
@@ -71,18 +74,27 @@ export default function App() {
         </div>
       )}
 
+      {!loading && !error && betsOpen && (
+        <BetsZone
+          onClose={() => {
+            window.history.pushState({}, '', '/');
+            setRoute('/');
+          }}
+        />
+      )}
+
       {!loading && !error && adminOpen && (
         <AdminPage
           players={players}
           onPlayersChange={setPlayers}
           onClose={() => {
             window.history.pushState({}, '', '/');
-            setAdminOpen(false);
+            setRoute('/');
           }}
         />
       )}
 
-      {!loading && !error && !adminOpen && tab === 'match' && (
+      {!loading && !error && !adminOpen && !betsOpen && tab === 'match' && (
         <>
           <SeasonRoundPicker onRoundReady={setRound} />
           {round ? (
@@ -99,15 +111,15 @@ export default function App() {
         </>
       )}
 
-      {!loading && !error && !adminOpen && tab === 'ranking' && <RankingPage players={players} />}
+      {!loading && !error && !adminOpen && !betsOpen && tab === 'ranking' && <RankingPage players={players} />}
 
-      {!loading && !error && !adminOpen && tab === 'bets' && <BetsPage />}
+      {!loading && !error && !adminOpen && !betsOpen && tab === 'bets' && <BetsPage />}
 
-      {!loading && !error && !adminOpen && tab === 'matches' && <MatchesPage />}
+      {!loading && !error && !adminOpen && !betsOpen && tab === 'matches' && <MatchesPage />}
 
-      {!loading && !error && !adminOpen && tab === 'history' && <HistoryPage players={players} />}
+      {!loading && !error && !adminOpen && !betsOpen && tab === 'history' && <HistoryPage players={players} />}
 
-      {!loading && !error && !adminOpen && tab === 'players' && (
+      {!loading && !error && !adminOpen && !betsOpen && tab === 'players' && (
         <PlayersPage players={players} onChange={setPlayers} />
       )}
 

@@ -15,8 +15,10 @@ export default function Header({ active, onChange, brand = 'Padeliticos', hideNa
       <h1>
         {brand === 'Padeliticos' ? (
           <>Padel<span>iticos</span></>
-        ) : (
+        ) : brand === 'Super Padelitico' ? (
           <>Super <span>Padelitico</span></>
+        ) : (
+          <>Padelitico <span>Apuestas</span></>
         )}
       </h1>
       {!hideNavigation && (

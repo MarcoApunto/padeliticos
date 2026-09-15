@@ -1,17 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../api/client.js';
-
-// Clave de pareja igual que el backend (matchStatsService): ids ordenados + '|'.
-function pairKey(players) {
-  return players.map((p) => String(p._id)).sort().join('|');
-}
-
-// Cuota = 1 / probabilidad. Con probabilidad nula o ínfima se muestra '∞'.
-function cuota(probability) {
-  if (!probability || probability <= 0) return '∞';
-  const value = 1 / probability;
-  return value >= 100 ? '∞' : value.toFixed(2);
-}
+import { cuota, pairKey } from './betsUtils.js';
 
 // Tablero de apuestas: todos los partidos SIN resultado de la temporada en
 // curso, con la cuota (1 / probabilidad de victoria por Elo), la media de Elo
@@ -52,7 +41,19 @@ export default function BetsPage() {
 
   return (
     <div className="bets-page">
-      <h2>Apuestas</h2>
+      <div className="bets-page__head">
+        <h2>Apuestas</h2>
+        <button
+          type="button"
+          className="bets-page__zone-btn"
+          onClick={() => {
+            window.history.pushState({}, '', '/apuestas');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }}
+        >
+          Zona de apuestas
+        </button>
+      </div>
       <p className="text-muted">
         Cuota según la probabilidad de victoria por Elo (base fija de
         pretemporada). A menor cuota, más favorito.

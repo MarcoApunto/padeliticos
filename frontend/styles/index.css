@@ -1018,22 +1018,35 @@ button {
           border-color: var(--team-b);
           background: rgba(232, 147, 90, 0.08);
         }
-        .team-side__names {
-          font-size: 13px;
-          font-weight: 500;
+        .team-side__pair {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
         }
-        .team-side__crown {
-          font-size: 12px;
+        .team-side__trophy {
+          font-size: 18px;
+          line-height: 1;
         }
-        .team-side__elos {
+        .team-side__players {
           display: flex;
           flex-direction: column;
           gap: 2px;
+        }
+        .team-side__player {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
           font-size: 11px;
+        }
+        .team-side__name {
+          font-size: 12px;
+          font-weight: 600;
+          overflow-wrap: anywhere;
+        }
+        .team-side__elo {
           color: var(--text-muted);
+          white-space: nowrap;
         }
       
 
@@ -1390,10 +1403,10 @@ button {
     border-radius: var(--radius-md);
     border: 1.5px solid transparent;
   }
-  .bet-side[data-team='a'] { border-color: var(--team-a-dim); }
-  .bet-side[data-team='b'] { border-color: var(--team-b-dim); }
-  .bet-side[data-favorite][data-team='a'] { border-color: var(--team-a); }
-  .bet-side[data-favorite][data-team='b'] { border-color: var(--team-b); }
+  .bets-page .bet-side[data-team='a'] { border-color: var(--team-a-dim); }
+  .bets-page .bet-side[data-team='b'] { border-color: var(--team-b-dim); }
+  .bets-page .bet-side[data-favorite][data-team='a'] { border-color: var(--team-a); }
+  .bets-page .bet-side[data-favorite][data-team='b'] { border-color: var(--team-b); }
   .bet-side__line {
     display: flex;
     align-items: baseline;

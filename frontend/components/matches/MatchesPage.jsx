@@ -2,10 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client.js';
 
 // Agrupa la lista plana de partidos por Temporada → Ronda → Partido.
-// Las temporadas se ordenan como vienen del selector (más recientes primero)
-// y dentro de cada una, las rondas y partidos en orden ascendente.
+// Las temporadas se ordenan cronológicamente (como el Historial), de la más
+// antigua a la más reciente, y dentro de cada una las rondas y partidos en
+// orden ascendente: así la suma de Elo se lee partido a partido hacia abajo.
 function groupMatches(matches, seasons) {
-  const seasonRank = new Map(seasons.map((season, index) => [season._id, index]));
+  const chronologicalSeasons = [...seasons].sort(
+    (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+  );
+  const seasonRank = new Map(
+    chronologicalSeasons.map((season, index) => [season._id, index])
+  );
   const seasonById = new Map();
 
   for (const match of matches) {
@@ -168,17 +174,29 @@ function MatchRow({ match }) {
 function TeamSide({ team, won, side }) {
   return (
     <div className="team-side" data-team={side} data-won={won || undefined}>
-      <div className="team-side__names">
-        {team.players.map((player) => player.name).join(' + ')}
-        {won && <span className="team-side__crown">🏆</span>}
-      </div>
-      <div className="team-side__elos numeric">
-        {team.players.map((player, index) => (
-          <span key={player._id}>
-            {team.eloBefore?.[index]?.toFixed(2)}
-            {team.eloAfter ? ` → ${team.eloAfter[index].toFixed(2)}` : ''}
+      <div className="team-side__pair">
+        {won && (
+          <span className="team-side__trophy" aria-hidden="true">
+            🏆
           </span>
-        ))}
+        )}
+        <div className="team-side__players">
+          {team.players.map((player, index) => {
+            const before =
+              team.eloCumulativeBefore?.[index] ?? team.eloBefore?.[index];
+            const after =
+              team.eloCumulativeAfter?.[index] ?? team.eloAfter?.[index];
+            return (
+              <div className="team-side__player" key={player._id}>
+                <span className="team-side__name">{player.name}</span>
+                <span className="team-side__elo numeric">
+                  {before?.toFixed(2)}
+                  {after != null ? ` → ${after.toFixed(2)}` : ''}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

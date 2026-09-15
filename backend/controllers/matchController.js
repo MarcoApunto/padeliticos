@@ -147,7 +147,8 @@ export const getAll = async (req, res) => {
       path: 'round',
       select: 'number season',
       populate: { path: 'season', select: 'name createdAt' },
-    });
+    })
+    .lean();
 
   if (seasonId) {
     matches = matches.filter(
@@ -172,6 +173,40 @@ export const getAll = async (req, res) => {
         }
       : (a, b) => new Date(b.playedAt) - new Date(a.playedAt)
   );
+
+  // El Elo de la Match (eloBefore/eloAfter) está anclado a la base FIJA de
+  // pretemporada. Para la vista de Partidos añadimos además el Elo ACUMULADO
+  // partido a partido (EloHistory), el mismo que muestra el Historial: así el
+  // segundo partido parte de donde terminó el primero, no de la base fija.
+  if (!pending && matches.length > 0) {
+    const histories = await EloHistory.find({
+      match: { $in: matches.map((match) => match._id) },
+    })
+      .select('match player eloBefore eloAfter')
+      .lean();
+    const byMatch = new Map();
+    for (const entry of histories) {
+      const key = String(entry.match);
+      if (!byMatch.has(key)) byMatch.set(key, []);
+      byMatch.get(key).push(entry);
+    }
+    for (const match of matches) {
+      const list = byMatch.get(String(match._id)) || [];
+      for (const team of [match.teamA, match.teamB]) {
+        const before = [];
+        const after = [];
+        for (const player of team.players) {
+          const entry = list.find(
+            (history) => String(history.player) === String(player._id)
+          );
+          before.push(entry ? entry.eloBefore : null);
+          after.push(entry ? entry.eloAfter : null);
+        }
+        team.eloCumulativeBefore = before;
+        team.eloCumulativeAfter = after;
+      }
+    }
+  }
 
   res.json(matches);
 };

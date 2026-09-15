@@ -99,15 +99,12 @@ export default function BetsZone({ onClose }) {
   }, [bets]);
 
   // Partidos agrupados por ronda y ordenados por temporada + número de ronda,
-  // para navegar con flechas como la gráfica. Los partidos CON resultado de la
-  // misma temporada se muestran bajo su ronda como "cerrados" (solo lectura).
-  // Las rondas que solo contienen cerrados solo se muestran si no hay ninguna
-  // apuesta pendiente (así el tablero se centra en la temporada en curso).
+  // para navegar con flechas como la gráfica. Los partidos CON resultado se
+  // muestran bajo su ronda como "cerrados" (solo lectura). Con partidos
+  // pendientes, solo se muestran las rondas abiertas (con partidos sin
+  // resultado): al entrar, el tablero aterriza en lo pendiente primero.
   const rounds = useMemo(() => {
     const hasPending = matches.length > 0;
-    const pendingSeasons = new Set(
-      matches.map((match) => match.round?.season?._id).filter(Boolean)
-    );
     const byKey = new Map();
     const addMatch = (match, isPlayed) => {
       const round = match.round;
@@ -136,9 +133,7 @@ export default function BetsZone({ onClose }) {
           entry.matches.length > 0 ||
           entry.played.length > 0
       )
-      .filter(
-        (entry) => (hasPending ? pendingSeasons.has(entry.seasonId) : true)
-      )
+      .filter((entry) => (hasPending ? entry.matches.length > 0 : true))
       .sort(
         (a, b) =>
           a.seasonId.localeCompare(b.seasonId) || a.roundNumber - b.roundNumber

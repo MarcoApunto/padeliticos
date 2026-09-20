@@ -2,7 +2,7 @@
 
 Web full-stack para gestionar el ranking de un grupo de pádel: registro de jugadores, partidos por rondas/temporadas y un **sistema de puntuación tipo Elo adaptado a dobles**, calculado en el backend.
 
-Nació para sustituir un Excel con fórmulas de Elo hechas a mano que el grupo llevaba semana a semana.
+Nació para sustituir un Excel con fórmulas de Elo hechas a mano que el grupo llevaba semana a semana. Sigue en uso real por el grupo.
 
 🔗 **Demo:** [padeliticos.vercel.app](https://padeliticos.vercel.app)
 
@@ -15,7 +15,7 @@ Nació para sustituir un Excel con fórmulas de Elo hechas a mano que el grupo l
 | **Frontend** | React 18 · Vite · [dnd-kit](https://dndkit.com/) (drag & drop) |
 | **Backend** | Node.js · Express · Mongoose (MongoDB) |
 | **Tests** | Node.js test runner (`node --test`) |
-| **Deploy** | Vercel |
+| **Deploy** | Frontend en Vercel · Backend en Render |
 
 ---
 
@@ -133,3 +133,4 @@ pnpm test
 - `/admin` y `/apuestas` son rutas sin enlace visible en la navegación, protegidas por claves distintas vía cabecera HTTP (`x-admin-key`, `x-bets-key`).
 - El cálculo de Elo del frontend (`utils/elo.js`) es solo para previsualización instantánea en la UI; el resultado que se persiste siempre lo valida y calcula el backend.
 - Los secretos reales (`.env`) están excluidos del control de versiones vía `.gitignore`; `.env.example` solo contiene los nombres de las variables necesarias, no valores reales.
+- El backend de la demo está desplegado en el plan gratuito de Render: si lleva un rato sin uso, la primera petición puede tardar hasta ~50 segundos en responder mientras el servidor "despierta". Es solo la primera carga; después va normal.

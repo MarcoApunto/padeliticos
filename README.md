@@ -2,7 +2,7 @@
 
 Web full-stack para gestionar el ranking de un grupo de pádel: registro de jugadores, partidos por rondas/temporadas y un **sistema de puntuación tipo Elo adaptado a dobles**, calculado en el backend.
 
-Nació para sustituir un Excel con fórmulas de Elo hechas a mano que el grupo llevaba semana a semana. Sigue en uso real por el grupo.
+Nació para sustituir un Excel con fórmulas de Elo hechas a mano que el grupo llevaba semana a semana.
 
 🔗 **Demo:** [padeliticos.vercel.app](https://padeliticos.vercel.app)
 
@@ -107,23 +107,23 @@ padeliticos/
 ```bash
 cd backend
 cp .env.example .env   # define MONGO_URI, ADMIN_KEY y BETS_KEY
-npm install
-npm run dev             # http://localhost:4000
+pnpm install
+pnpm dev                # http://localhost:4000
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev             # http://localhost:5173
+pnpm install
+pnpm dev                # http://localhost:5173
 ```
 
 ### Tests
 
 ```bash
 cd backend
-npm test
+pnpm test
 ```
 
 ---

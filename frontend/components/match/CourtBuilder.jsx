@@ -21,6 +21,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   const [slots, setSlots] = useState(emptySlots);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [match, setMatch] = useState(null); // partido ya creado en backend
+  const [matchType, setMatchType] = useState('competitive');
   const [editingMatchId, setEditingMatchId] = useState(null);
   const [matches, setMatches] = useState([]);
   const [matchesLoading, setMatchesLoading] = useState(true);
@@ -42,6 +43,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     let cancelled = false;
     setMatch(null);
     setSlots(emptySlots());
+    setMatchType('competitive');
     setMatchesLoading(true);
     api
       .getMatches(round._id)
@@ -151,11 +153,13 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     setSlots(emptySlots());
     setMatch(null);
     setEditingMatchId(null);
+    setMatchType('competitive');
     setError(null);
   }
 
   function startEditingMatch(selectedMatch) {
     setEditingMatchId(selectedMatch._id);
+    setMatchType(selectedMatch.type === 'friendly' ? 'friendly' : 'competitive');
     setSelectedPlayerId(null);
     setError(null);
     setSlots({
@@ -173,6 +177,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
       const editingMatch = matches.find((item) => item._id === editingMatchId);
       const payload = {
         number: editingMatch ? editingMatch.number : nextMatchNumber,
+        type: matchType,
         teamA: { players: [slots['a-0'], slots['a-1']] },
         teamB: { players: [slots['b-0'], slots['b-1']] },
       };
@@ -286,6 +291,23 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
           </div>
         </div>
 
+        <label className="match-type-toggle">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label="Partido amistoso"
+            checked={matchType === 'friendly'}
+            onChange={(event) => setMatchType(event.target.checked ? 'friendly' : 'competitive')}
+          />
+          <span className="match-type-toggle__track" aria-hidden="true">
+            <span className="match-type-toggle__thumb" />
+          </span>
+          <span className="match-type-toggle__label">Partido amistoso</span>
+          <span className="match-type-toggle__status" data-type={matchType}>
+            {matchType === 'friendly' ? 'Sin Elo' : 'Competitivo'}
+          </span>
+        </label>
+
         {!match && (
           <button
             type="button"
@@ -304,16 +326,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
           </button>
         )}
 
-        {!match && !editingMatchId && (
-          <RoundMatches
-            matches={matches}
-            loading={matchesLoading}
-            onSelect={openMatch}
-            onEdit={startEditingMatch}
-          />
-        )}
-
-        {!match && (
+         {!match && (
           <div className="bench">
             <span className="bench__label">
               Banquillo — pulsa o arrastra a un hueco
@@ -335,6 +348,17 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
           </div>
         )}
         </>}
+
+        {!match && !editingMatchId && (
+          <RoundMatches
+            matches={matches}
+            loading={matchesLoading}
+            onSelect={openMatch}
+            onEdit={startEditingMatch}
+          />
+        )}
+
+       
 
         {error && <p className="court-builder__error">{error}</p>}
 
@@ -396,6 +420,9 @@ function RoundMatches({ matches, loading, onSelect, onEdit }) {
                 <div>
                   <div className="round-match__head">
                     <strong>Partido {match.number}</strong>
+                    <span className="match-type-badge" data-type={match.type === 'friendly' ? 'friendly' : 'competitive'}>
+                      {match.type === 'friendly' ? 'Amistoso' : 'Competitivo'}
+                    </span>
                     {match.score && (
                       <span className="round-match__score numeric">
                         {match.score.teamA} – {match.score.teamB}

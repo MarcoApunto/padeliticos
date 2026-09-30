@@ -7,6 +7,7 @@ import { cuota, pairKey } from './betsUtils.js';
 // de cada equipo y el histórico V/D de esa pareja concreta en partidos jugados.
 export default function BetsPage() {
   const [matches, setMatches] = useState([]);
+  const [matchType, setMatchType] = useState('competitive');
   const [pairStats, setPairStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +16,7 @@ export default function BetsPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    Promise.all([api.getPendingMatches(), api.getPairStats()])
+    Promise.all([api.getPendingMatches(), api.getPairStats(matchType)])
       .then(([pending, stats]) => {
         setMatches(pending);
         setPairStats(stats);
@@ -24,7 +25,11 @@ export default function BetsPage() {
         setError(err.message || 'No se pudieron cargar los partidos')
       )
       .finally(() => setLoading(false));
-  }, [retryKey]);
+  }, [retryKey, matchType]);
+
+  const visibleMatches = matches.filter((match) =>
+    (match.type === 'friendly' ? 'friendly' : 'competitive') === matchType
+  );
 
   if (loading) return <p className="text-muted">Cargando apuestas…</p>;
 
@@ -59,11 +64,16 @@ export default function BetsPage() {
         pretemporada). A menor cuota, más favorito.
       </p>
 
-      {matches.length === 0 ? (
-        <p className="text-muted">No hay partidos pendientes para apostar.</p>
+      <div className="match-type-tabs" role="tablist" aria-label="Tipo de partidos para apostar">
+        <button type="button" role="tab" aria-selected={matchType === 'competitive'} onClick={() => setMatchType('competitive')}>Competitivos</button>
+        <button type="button" role="tab" aria-selected={matchType === 'friendly'} onClick={() => setMatchType('friendly')}>Amistosos</button>
+      </div>
+
+      {visibleMatches.length === 0 ? (
+        <p className="text-muted">No hay partidos {matchType === 'friendly' ? 'amistosos' : 'competitivos'} pendientes para apostar.</p>
       ) : (
         <ul className="bets-page__list">
-          {matches.map((match) => (
+          {visibleMatches.map((match) => (
             <BetRow key={match._id} match={match} pairStats={pairStats} />
           ))}
         </ul>
@@ -81,6 +91,9 @@ function BetRow({ match, pairStats }) {
         {match.round?.season?.name && <span>{match.round.season.name}</span>}
         {match.round?.number != null && <span>Ronda {match.round.number}</span>}
         <span>Partido {match.number}</span>
+        <span className="match-type-badge" data-type={match.type === 'friendly' ? 'friendly' : 'competitive'}>
+          {match.type === 'friendly' ? 'Amistoso' : 'Competitivo'}
+        </span>
       </div>
       <div className="bet-row__board">
         <BetSide

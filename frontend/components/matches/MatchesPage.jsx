@@ -56,6 +56,7 @@ function groupMatches(matches, seasons) {
 export default function MatchesPage() {
   const [seasons, setSeasons] = useState([]);
   const [seasonId, setSeasonId] = useState('');
+  const [matchType, setMatchType] = useState('competitive');
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -81,7 +82,11 @@ export default function MatchesPage() {
       .finally(() => setLoading(false));
   }, [seasonId, retryKey]);
 
-  const grouped = useMemo(() => groupMatches(matches, seasons), [matches, seasons]);
+  const typedMatches = useMemo(
+    () => matches.filter((match) => (match.type === 'friendly' ? 'friendly' : 'competitive') === matchType),
+    [matches, matchType]
+  );
+  const grouped = useMemo(() => groupMatches(typedMatches, seasons), [typedMatches, seasons]);
 
   return (
     <div className="matches-page">
@@ -97,6 +102,11 @@ export default function MatchesPage() {
         </select>
       </div>
 
+      <div className="match-type-tabs" role="tablist" aria-label="Tipo de partidos">
+        <button type="button" role="tab" aria-selected={matchType === 'competitive'} onClick={() => setMatchType('competitive')}>Competitivos</button>
+        <button type="button" role="tab" aria-selected={matchType === 'friendly'} onClick={() => setMatchType('friendly')}>Amistosos</button>
+      </div>
+
       {loading && <p className="text-muted">Cargando partidos…</p>}
 
       {!loading && error && (
@@ -108,11 +118,11 @@ export default function MatchesPage() {
         </div>
       )}
 
-      {!loading && !error && matches.length === 0 && (
-        <p className="text-muted">Todavía no se ha jugado ningún partido.</p>
+      {!loading && !error && typedMatches.length === 0 && (
+        <p className="text-muted">Todavía no se ha jugado ningún partido {matchType === 'friendly' ? 'amistoso' : 'competitivo'}.</p>
       )}
 
-      {!loading && !error && matches.length > 0 && (
+      {!loading && !error && typedMatches.length > 0 && (
         <div className="matches-page__tree">
           {grouped.map((season) => (
             <section className="matches-page__season" key={season.id}>
@@ -149,6 +159,9 @@ function MatchRow({ match }) {
     <li className="match-row">
       <div className="match-row__meta">
         <span>Partido {match.number}</span>
+        <span className="match-type-badge" data-type={match.type === 'friendly' ? 'friendly' : 'competitive'}>
+          {match.type === 'friendly' ? 'Amistoso' : 'Competitivo'}
+        </span>
         {played && <span>{played}</span>}
       </div>
 

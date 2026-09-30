@@ -23,6 +23,7 @@ export default function BetsZone({ onClose }) {
   const [matches, setMatches] = useState([]); // pendientes (se puede apostar)
   const [played, setPlayed] = useState([]); // con resultado (solo lectura)
   const [pairStats, setPairStats] = useState({});
+  const [activeMatchType, setActiveMatchType] = useState('competitive');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,14 +60,15 @@ export default function BetsZone({ onClose }) {
       api.bets.getBets(betsKey),
       api.getPendingMatches(),
       api.getAllMatches(),
-      api.getPairStats(),
+      api.getPairStats('competitive'),
+      api.getPairStats('friendly'),
     ])
-      .then(([bettorsData, betsData, pendingMatches, playedMatches, pairStatsData]) => {
+      .then(([bettorsData, betsData, pendingMatches, playedMatches, competitiveStats, friendlyStats]) => {
         setBettors(bettorsData);
         setBets(betsData);
         setMatches(pendingMatches);
         setPlayed(playedMatches);
-        setPairStats(pairStatsData);
+        setPairStats({ competitive: competitiveStats, friendly: friendlyStats });
         setError(null);
       })
       .catch(showError)
@@ -104,7 +106,13 @@ export default function BetsZone({ onClose }) {
   // pendientes, solo se muestran las rondas abiertas (con partidos sin
   // resultado): al entrar, el tablero aterriza en lo pendiente primero.
   const rounds = useMemo(() => {
-    const hasPending = matches.length > 0;
+    const typedMatches = matches.filter((match) =>
+      (match.type === 'friendly' ? 'friendly' : 'competitive') === activeMatchType
+    );
+    const typedPlayed = played.filter((match) =>
+      (match.type === 'friendly' ? 'friendly' : 'competitive') === activeMatchType
+    );
+    const hasPending = typedMatches.length > 0;
     const byKey = new Map();
     const addMatch = (match, isPlayed) => {
       const round = match.round;
@@ -125,8 +133,8 @@ export default function BetsZone({ onClose }) {
       }
       (isPlayed ? entry.played : entry.matches).push(match);
     };
-    for (const match of matches) addMatch(match, false);
-    for (const match of played) addMatch(match, true);
+    for (const match of typedMatches) addMatch(match, false);
+    for (const match of typedPlayed) addMatch(match, true);
     return [...byKey.values()]
       .filter(
         (entry) =>
@@ -138,7 +146,7 @@ export default function BetsZone({ onClose }) {
         (a, b) =>
           a.seasonId.localeCompare(b.seasonId) || a.roundNumber - b.roundNumber
       );
-  }, [matches, played]);
+  }, [matches, played, activeMatchType]);
 
   const activeRound = rounds[Math.min(activeRoundIndex, Math.max(0, rounds.length - 1))];
 
@@ -370,6 +378,10 @@ export default function BetsZone({ onClose }) {
                   </div>
                 )}
               </div>
+              <div className="match-type-tabs" role="tablist" aria-label="Tipo de partidos para apostar">
+                <button type="button" role="tab" aria-selected={activeMatchType === 'competitive'} onClick={() => { setActiveMatchType('competitive'); setActiveRoundIndex(0); }}>Competitivos</button>
+                <button type="button" role="tab" aria-selected={activeMatchType === 'friendly'} onClick={() => { setActiveMatchType('friendly'); setActiveRoundIndex(0); }}>Amistosos</button>
+              </div>
               {loading && <p className="text-muted">Cargando…</p>}
               {!loading && rounds.length === 0 && (
                 <p className="text-muted">
@@ -387,7 +399,7 @@ export default function BetsZone({ onClose }) {
                             key={match._id}
                             match={match}
                             allBets={bets}
-                            pairStats={pairStats}
+                            pairStats={pairStats[activeMatchType] || {}}
                             selectedBettorId={selectedBettorId}
                             onSideClick={(team) => {
                               if (!selectedBettorId) return;
@@ -413,7 +425,7 @@ export default function BetsZone({ onClose }) {
                               key={match._id}
                               match={match}
                               allBets={bets}
-                              pairStats={pairStats}
+                              pairStats={pairStats[activeMatchType] || {}}
                               onCancelBet={cancelBet}
                               saving={saving}
                               disabled
@@ -636,6 +648,9 @@ function MatchBetRow({ match, allBets, pairStats, selectedBettorId, onSideClick,
         {match.round?.season?.name && <span>{match.round.season.name}</span>}
         {match.round?.number != null && <span>Ronda {match.round.number}</span>}
         <span>Partido {match.number}</span>
+        <span className="match-type-badge" data-type={match.type === 'friendly' ? 'friendly' : 'competitive'}>
+          {match.type === 'friendly' ? 'Amistoso' : 'Competitivo'}
+        </span>
         {disabled && <span className="bet-row__closed">Cerrado</span>}
       </div>
       <div className="bet-row__board">

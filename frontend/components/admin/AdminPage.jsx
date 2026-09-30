@@ -216,6 +216,23 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
     }
   }
 
+  async function changeMatchType(match) {
+    const type = match.type === 'friendly' ? 'competitive' : 'friendly';
+    setSaving(`match-type-${match._id}`);
+    setError(null);
+    setMessage(null);
+    try {
+      const updated = await api.admin.updateMatchType(adminKey, match._id, type);
+      setMatches((items) => items.map((item) => item._id === updated._id ? updated : item));
+      if (updated.winner) onPlayersChange(await api.getPlayers());
+      setMessage(`Partido ${updated.number}: ahora es ${type === 'friendly' ? 'amistoso' : 'competitivo'}${updated.winner ? '. Elo recalculado.' : '.'}`);
+    } catch (err) {
+      showError(err);
+    } finally {
+      setSaving(null);
+    }
+  }
+
   async function rebuildAllRatings() {
     setError(null);
     setMessage(null);
@@ -321,6 +338,9 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
           <div className="admin-match-card" key={match._id} data-played={match.winner || undefined}>
             <div className="admin-match-card__topline">
               <strong className="admin-match-card__number">Partido {match.number}</strong>
+              <span className="match-type-badge" data-type={match.type === 'friendly' ? 'friendly' : 'competitive'}>
+                {match.type === 'friendly' ? 'Amistoso' : 'Competitivo'}
+              </span>
               <span className="admin-match-card__status">
                 {match.winner ? `Ganó el equipo ${match.winner === 1 ? 'A' : 'B'}` : 'Pendiente'}
               </span>
@@ -337,6 +357,17 @@ export default function AdminPage({ players, onPlayersChange, onClose }) {
               </div>
             </div>
             <div className="admin-match-card__actions">
+              <button
+                type="button"
+                className="admin-match-type-button"
+                data-target={match.type === 'friendly' ? 'competitive' : 'friendly'}
+                disabled={saving === `match-type-${match._id}`}
+                onClick={() => changeMatchType(match)}
+              >
+                {saving === `match-type-${match._id}`
+                  ? 'Guardando…'
+                  : `Cambiar a ${match.type === 'friendly' ? 'competitivo' : 'amistoso'}`}
+              </button>
               {!match.winner && (
                 <>
                   <label className="admin-match-card__number-edit">

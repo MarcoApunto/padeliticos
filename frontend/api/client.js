@@ -50,7 +50,7 @@ export const api = {
     return request(`/matches${queryString ? `?${queryString}` : ''}`);
   },
   getPendingMatches: () => request('/matches?status=pending'),
-  getPairStats: () => request('/matches/pair-stats'),
+  getPairStats: (type) => request(`/matches/pair-stats${type ? `?type=${encodeURIComponent(type)}` : ''}`),
   getMatches: (roundId) => request(`/rounds/${roundId}/matches`),
   createMatch: (roundId, data) =>
     request(`/rounds/${roundId}/matches`, {
@@ -115,6 +115,11 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    updateMatchType: (key, id, type) =>
+      adminRequest(`/admin/matches/${id}/type`, key, {
+        method: 'PUT',
+        body: JSON.stringify({ type }),
+      }),
     rebuildRatings: (key) =>
       adminRequest('/admin/ratings/rebuild', key, { method: 'POST' }),
   },
@@ -159,7 +164,11 @@ export const api = {
 function adminRequest(path, key, options = {}) {
   return request(path, {
     ...options,
-    headers: { ...options.headers, 'x-admin-key': key },
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+      'x-admin-key': key,
+    },
   });
 }
 

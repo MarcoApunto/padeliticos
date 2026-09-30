@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Bettor from '../models/Bettor.js';
 import Bet from '../models/Bet.js';
 import Match from '../models/Match.js';
@@ -103,56 +104,65 @@ export const placeBet = async (req, res) => {
   const stake = Number(req.body.amount);
   if (!stake || stake <= 0) throw new HttpError(400, 'amount debe ser mayor que 0');
 
-  const match = await Match.findById(matchId);
-  if (!match) throw new HttpError(404, 'Partido no encontrado');
-  if (match.winner) throw new HttpError(409, 'El partido ya tiene resultado');
+  const session = await mongoose.startSession();
+  let wasExisting = false;
+  try {
+    await session.withTransaction(async () => {
+      const match = await Match.findById(matchId)
+        .select('+bettingRevision')
+        .session(session);
+      if (!match) throw new HttpError(404, 'Partido no encontrado');
+      if (match.winner) throw new HttpError(409, 'El partido ya tiene resultado');
 
-  // La cuota se congela con la probabilidad que muestra la zona de apuestas.
-  const probability =
-    team === 1 ? match.teamA?.winProbability : match.teamB?.winProbability;
-  const cuota = probability ? 1 / probability : Number.POSITIVE_INFINITY;
-  if (!Number.isFinite(cuota)) {
-    throw new HttpError(400, 'No hay cuota válida para ese lado');
-  }
+      // La cuota se congela con la probabilidad que muestra la zona de apuestas.
+      const probability =
+        team === 1 ? match.teamA?.winProbability : match.teamB?.winProbability;
+      const cuota = probability ? 1 / probability : Number.POSITIVE_INFINITY;
+      if (!Number.isFinite(cuota)) {
+        throw new HttpError(400, 'No hay cuota válida para ese lado');
+      }
 
-  const bettor = await Bettor.findById(bettorId);
-  if (!bettor) throw new HttpError(404, 'Apostador no encontrado');
-  if (!bettor.active) throw new HttpError(400, 'El apostador está desactivado');
+      const bettor = await Bettor.findById(bettorId).session(session);
+      if (!bettor) throw new HttpError(404, 'Apostador no encontrado');
+      if (!bettor.active) throw new HttpError(400, 'El apostador está desactivado');
 
-  // El saldo disponible descuenta lo ya comprometido en apuestas pendientes.
-  const pendingBets = await Bet.find({ bettor: bettorId, status: 'pending' });
-  const available = bettor.balance - reservedAmount(pendingBets);
-  if (available < stake) {
-    throw new HttpError(400, 'Saldo insuficiente para esa apuesta');
-  }
+      const pendingBets = await Bet.find({ bettor: bettorId, status: 'pending' }).session(
+        session
+      );
+      const available = bettor.balance - reservedAmount(pendingBets);
+      if (available < stake) {
+        throw new HttpError(400, 'Saldo insuficiente para esa apuesta');
+      }
 
-  // Si el apostador ya tiene una apuesta PENDIENTE en ese mismo partido y
-  // ese mismo lado, se suma el importe a la existente (no se crea otra).
-  const existing = await Bet.findOne({
-    bettor: bettorId,
-    match: matchId,
-    team,
-    status: 'pending',
-  });
-  if (existing) {
-    existing.amount += stake;
-    await existing.save();
-  } else {
-    await Bet.create({
-      bettor: bettorId,
-      match: matchId,
-      team,
-      amount: stake,
-      cuota,
+      const existing = await Bet.findOne({
+        bettor: bettorId,
+        match: matchId,
+        team,
+        status: 'pending',
+      }).session(session);
+      wasExisting = Boolean(existing);
+      if (existing) {
+        existing.amount += stake;
+        await existing.save({ session });
+      } else {
+        await new Bet({ bettor: bettorId, match: matchId, team, amount: stake, cuota }).save({
+          session,
+        });
+      }
+
+      // Esta escritura sincroniza la apuesta con las ediciones de alineación:
+      // Mongo hará reintentar una de las transacciones si ambas coinciden.
+      match.bettingRevision += 1;
+      await match.save({ session });
     });
+  } finally {
+    await session.endSession();
   }
 
-  // Como placeBet solo crea un documento por vez, buscamos la apuesta
-  // vigente del apostador en ese partido y lado para devolverla.
   const bet = await populatedBet(
     Bet.findOne({ bettor: bettorId, match: matchId, team, status: 'pending' })
   );
-  res.status(existing ? 200 : 201).json(bet);
+  res.status(wasExisting ? 200 : 201).json(bet);
 };
 
 // PUT /api/bets/:id — cambiar el importe de una apuesta PENDIENTE.

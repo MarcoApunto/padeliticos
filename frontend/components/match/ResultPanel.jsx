@@ -10,9 +10,8 @@ import {
 // quiere, la nota (0-10) de cada jugador y el marcador por puntos. Al confirmar,
 // se cierra el partido vía PATCH /matches/:id/result, que es donde el servidor
 // calcula y persiste el elo final de verdad.
-export default function ResultPanel({ match, onConfirm, saving, onBack }) {
+export default function ResultPanel({ match, onConfirm, saving, onBack, canConfirm = true, adminKey, onAdminKeyChange, showBack = true, showAdminKey = true }) {
   const [winner, setWinner] = useState(match.winner || null);
-  const [adminKey, setAdminKey] = useState('');
   const [notes, setNotes] = useState({
     a: match.teamA.notes || [undefined, undefined],
     b: match.teamB.notes || [undefined, undefined],
@@ -26,7 +25,7 @@ export default function ResultPanel({ match, onConfirm, saving, onBack }) {
   const teamBElos = match.teamB.eloBefore;
 
   const previewFor = (team) => {
-    if (!winner) return null;
+    if (!winner || match.teamA.players.length !== 2 || match.teamB.players.length !== 2) return null;
     const elos = team === 'a' ? teamAElos : teamBElos;
     const rivalAvg =
       team === 'a' ? match.teamB.avgElo : match.teamA.avgElo;
@@ -45,8 +44,8 @@ export default function ResultPanel({ match, onConfirm, saving, onBack }) {
 
   const previewA = previewFor('a');
   const previewB = previewFor('b');
-  const teamAChance = Math.round((match.teamA.winProbability || 0) * 100);
-  const teamBChance = Math.round((match.teamB.winProbability || 0) * 100);
+  const teamAChance = match.teamA.winProbability == null ? null : Math.round(match.teamA.winProbability * 100);
+  const teamBChance = match.teamB.winProbability == null ? null : Math.round(match.teamB.winProbability * 100);
 
   const updateNote = (team, index, value) => {
     setNotes((prev) => {
@@ -65,11 +64,16 @@ export default function ResultPanel({ match, onConfirm, saving, onBack }) {
 
   return (
     <div className="result-panel">
-      <h3>{match.winner ? 'Editar resultado' : '¿Quién ganó?'}</h3>
+      <div className="result-panel__heading">
+        <h3>{match.winner ? 'Editar resultado' : '¿Quién ganó?'}</h3>
+        <span className="match-type-badge" data-type={match.type === 'friendly' ? 'friendly' : 'competitive'}>
+          {match.type === 'friendly' ? 'Amistoso' : 'Competitivo'}
+        </span>
+      </div>
       <div className="result-panel__probabilities" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', fontWeight: 600 }}>
-        <span className="numeric" data-team="a">{teamAChance}%</span>
+        <span className="numeric" data-team="a">{teamAChance == null ? '—' : `${teamAChance}%`}</span>
         <span>Probabilidad</span>
-        <span className="numeric" data-team="b">{teamBChance}%</span>
+        <span className="numeric" data-team="b">{teamBChance == null ? '—' : `${teamBChance}%`}</span>
       </div>
       <div className="result-panel__teams">
         {['a', 'b'].map((team) => {
@@ -86,7 +90,11 @@ export default function ResultPanel({ match, onConfirm, saving, onBack }) {
               onClick={() => setWinner(winnerValue)}
             >
               <span className="result-panel__players">
-                {teamData.players.map((p) => p.name).join(' + ')}
+                {teamData.players.length === 2
+                  ? teamData.players.map((p) => p.name).join(' + ')
+                  : teamData.players.length
+                    ? `${teamData.players.map((p) => p.name).join(' + ')} · equipo incompleto`
+                    : 'Equipo incompleto'}
               </span>
               {preview && (
                 <span className="result-panel__preview numeric">
@@ -156,25 +164,35 @@ export default function ResultPanel({ match, onConfirm, saving, onBack }) {
         })}
       </details>
 
-      <label className="result-panel__key">
-        Clave de administrador
-        <input
-          type="password"
-          value={adminKey}
-          onChange={(e) => setAdminKey(e.target.value)}
-          placeholder="Obligatoria para guardar"
-          autoComplete="off"
-        />
-      </label>
+      {showAdminKey && (
+        <label className="result-panel__key">
+          Clave de administrador
+          <input
+            type="password"
+            value={adminKey}
+            onChange={(e) => onAdminKeyChange(e.target.value)}
+            placeholder="Obligatoria para guardar"
+            autoComplete="off"
+          />
+        </label>
+      )}
+
+      {!canConfirm && (
+        <p className="result-panel__unsaved" role="status">
+          Guarda primero los cambios del partido para confirmar el resultado con los equipos actualizados.
+        </p>
+      )}
 
       <div className="result-panel__actions">
-        <button type="button" className="court-builder__back" onClick={onBack}>
-          Cancelar
-        </button>
+        {showBack && (
+          <button type="button" className="court-builder__back" onClick={onBack}>
+            Cancelar
+          </button>
+        )}
         <button
           type="button"
           className="result-panel__confirm"
-          disabled={!winner || saving || halfScore || !adminKey}
+          disabled={!winner || saving || halfScore || !adminKey || !canConfirm}
           onClick={() =>
             onConfirm({
               winner,

@@ -270,35 +270,55 @@ export const updatePending = async (req, res) => {
     throw new HttpError(400, 'type debe ser competitive o friendly');
   }
 
-  const match = await Match.findById(req.params.id);
-  if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
-  if (match.winner) {
-    return res.status(409).json({
-      error: 'Solo se pueden editar partidos sin resultado',
-    });
-  }
-
+  const session = await mongoose.startSession();
   try {
-    const round = await Round.findById(match.round).populate('season');
-    const base = round?.season?.baseEloByPlayer;
-    const data = await resolveTeamData(number, teamA, teamB, base);
-    match.number = data.number;
-    if (type !== undefined) match.type = type;
-    match.teamA = data.teamA;
-    match.teamB = data.teamB;
-    match.eloDifference = data.eloDifference;
-    await match.save();
-    // Si cambian las parejas, las apuestas pendientes quedan sobre jugadores
-    // que ya no están en el partido: se anulan (el saldo deja de reservarse).
-    await Bet.deleteMany({ match: match._id, status: 'pending' });
+    await session.withTransaction(async () => {
+      const match = await Match.findById(req.params.id)
+        .select('+bettingRevision')
+        .session(session);
+      if (!match) throw new HttpError(404, 'Partido no encontrado');
+      if (match.winner) {
+        throw new HttpError(409, 'Solo se pueden editar partidos sin resultado');
+      }
+
+      const round = await Round.findById(match.round).populate('season').session(session);
+      const base = round?.season?.baseEloByPlayer;
+      const data = await resolveTeamData(number, teamA, teamB, base);
+      const previousPlayers = [...match.teamA.players, ...match.teamB.players].map(String);
+      const updatedPlayers = [...data.teamA.players, ...data.teamB.players].map(String);
+      const lineupChanged =
+        previousPlayers.length !== updatedPlayers.length ||
+        previousPlayers.some((playerId, index) => playerId !== updatedPlayers[index]);
+
+      match.number = data.number;
+      if (type !== undefined) match.type = type;
+      match.teamA = data.teamA;
+      match.teamB = data.teamB;
+      match.eloDifference = data.eloDifference;
+      // Compartir la escritura con placeBet serializa ambas acciones en Mongo.
+      match.bettingRevision += 1;
+      await match.save({ session });
+
+      // Un cambio de alineación invalida solo apuestas aún pendientes. Se
+      // conserva el documento para que quede constancia en el historial.
+      if (lineupChanged) {
+        await Bet.updateMany(
+          { match: match._id, status: 'pending' },
+          { $set: { status: 'cancelled', settledDelta: 0 } },
+          { session }
+        );
+      }
+    });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'Ese número ya existe en la ronda' });
     }
     throw err;
+  } finally {
+    await session.endSession();
   }
 
-  const updated = await Match.findById(match._id)
+  const updated = await Match.findById(req.params.id)
     .populate('teamA.players', 'name currentElo')
     .populate('teamB.players', 'name currentElo');
   res.json(updated);

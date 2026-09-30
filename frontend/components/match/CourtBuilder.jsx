@@ -27,6 +27,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   const [matchesLoading, setMatchesLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [savingResult, setSavingResult] = useState(false);
+  const [adminKey, setAdminKey] = useState('');
   const [error, setError] = useState(null);
   // Contador local del siguiente número de partido dentro de esta ronda.
   // Arranca desde round.matchCount pero luego se lleva localmente para no
@@ -94,6 +95,19 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   );
 
   const isComplete = SLOT_IDS.every((id) => slots[id]);
+  const playerIdOf = (player) => (typeof player === 'string' ? player : player?._id);
+  const editingMatch = matches.find((item) => item._id === editingMatchId) ||
+    (match?._id === editingMatchId ? match : null);
+  const matchEditsDirty = Boolean(
+    editingMatch && (
+      matchType !== (editingMatch.type === 'friendly' ? 'friendly' : 'competitive') ||
+      slots['a-0'] !== playerIdOf(editingMatch.teamA.players[0]) ||
+      slots['a-1'] !== playerIdOf(editingMatch.teamA.players[1]) ||
+      slots['b-0'] !== playerIdOf(editingMatch.teamB.players[0]) ||
+      slots['b-1'] !== playerIdOf(editingMatch.teamB.players[1])
+    )
+  );
+  const managingPendingMatch = Boolean(match && editingMatchId);
 
   // Misma regla que el backend: durante TODA la temporada se trabaja contra la
   // base de PRETEMPORADA (season.baseEloByPlayer), NO contra el currentElo
@@ -113,6 +127,37 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     const teamBElos = [slots['b-0'], slots['b-1']].map(eloForCard);
     return previewMatch(teamAElos, teamBElos);
   }, [isComplete, slots, playersById, seasonBaseByPlayer]);
+
+  const liveResultMatch = (() => {
+    if (!managingPendingMatch) return match;
+
+    const livePreview = isComplete
+      ? previewMatch(
+          [slots['a-0'], slots['a-1']].map(eloForCard),
+          [slots['b-0'], slots['b-1']].map(eloForCard)
+        )
+      : null;
+    const liveTeam = (team, slotIds) => {
+      const originalTeam = team === 'a' ? match.teamA : match.teamB;
+      const teamPlayers = slotIds.map((slotId) => playersById[slots[slotId]]).filter(Boolean);
+      const teamElos = slotIds
+        .map((slotId) => playersById[slots[slotId]] ? eloForCard(slots[slotId]) : null)
+        .filter((elo) => elo !== null);
+      const teamStats = livePreview?.[team === 'a' ? 'teamA' : 'teamB'] || {
+        eloBefore: teamElos,
+        avgElo: null,
+        winProbability: null,
+      };
+      return { ...originalTeam, ...teamStats, players: teamPlayers };
+    };
+
+    return {
+      ...match,
+      type: matchType,
+      teamA: liveTeam('a', ['a-0', 'a-1']),
+      teamB: liveTeam('b', ['b-0', 'b-1']),
+    };
+  })();
 
   function assign(slotId, playerId) {
     setSlots((prev) => {
@@ -154,6 +199,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     setMatch(null);
     setEditingMatchId(null);
     setMatchType('competitive');
+    setAdminKey('');
     setError(null);
   }
 
@@ -163,36 +209,41 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     setSelectedPlayerId(null);
     setError(null);
     setSlots({
-      'a-0': selectedMatch.teamA.players[0]._id,
-      'a-1': selectedMatch.teamA.players[1]._id,
-      'b-0': selectedMatch.teamB.players[0]._id,
-      'b-1': selectedMatch.teamB.players[1]._id,
+      'a-0': playerIdOf(selectedMatch.teamA.players[0]),
+      'a-1': playerIdOf(selectedMatch.teamA.players[1]),
+      'b-0': playerIdOf(selectedMatch.teamB.players[0]),
+      'b-1': playerIdOf(selectedMatch.teamB.players[1]),
     });
   }
 
   async function handleSaveMatch() {
+    const matchIdToUpdate = editingMatchId;
     setCreating(true);
     setError(null);
     try {
-      const editingMatch = matches.find((item) => item._id === editingMatchId);
+      const matchToUpdate = matches.find((item) => item._id === matchIdToUpdate);
       const payload = {
-        number: editingMatch ? editingMatch.number : nextMatchNumber,
+        number: matchToUpdate ? matchToUpdate.number : nextMatchNumber,
         type: matchType,
         teamA: { players: [slots['a-0'], slots['a-1']] },
         teamB: { players: [slots['b-0'], slots['b-1']] },
       };
       let createdMatchId = null;
-      if (editingMatchId) {
-        await api.updateMatch(editingMatchId, payload);
-        setEditingMatchId(null);
+      if (matchIdToUpdate) {
+        await api.updateMatch(matchIdToUpdate, payload);
       } else {
         const created = await api.createMatch(round._id, payload);
         setNextMatchNumber((n) => n + 1);
         createdMatchId = created._id;
       }
-      setSlots(emptySlots());
       const updatedMatches = await api.getMatches(round._id);
       setMatches(updatedMatches);
+      if (matchIdToUpdate) {
+        const updatedMatch = updatedMatches.find((item) => item._id === matchIdToUpdate);
+        if (updatedMatch) setMatch(updatedMatch);
+      } else {
+        setSlots(emptySlots());
+      }
       // Abrimos directamente el panel de resultado del partido recién creado.
       if (createdMatchId) {
         const populated = updatedMatches.find((item) => item._id === createdMatchId);
@@ -206,6 +257,10 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   }
 
   async function handleConfirmResult(payload) {
+    if (matchEditsDirty) {
+      setError('Guarda primero los cambios del partido antes de confirmar el resultado.');
+      return;
+    }
     setSavingResult(true);
     setError(null);
     try {
@@ -223,26 +278,54 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     }
   }
 
-  async function openMatch(selected) {
+  async function openManagement(selected) {
+    setError(null);
     try {
       const freshMatches = await api.getMatches(round._id);
       setMatches(freshMatches);
       const fresh = freshMatches.find((item) => item._id === selected._id) || selected;
       setMatch(fresh);
+      if (fresh.winner) {
+        setEditingMatchId(null);
+        setSlots(emptySlots());
+      } else {
+        startEditingMatch(fresh);
+      }
     } catch (err) {
       setError(err.message);
       setMatch(selected);
+      if (!selected.winner) startEditingMatch(selected);
     }
   }
 
   const availablePlayers = players.filter(
     (player) => !usedPlayerIds.has(player._id) && !reservedPlayerIds.has(player._id)
   );
-
+  const resultPanel = match && (
+      <ResultPanel
+      key={`${match._id}-${match.winner || 'pending'}`}
+      match={liveResultMatch}
+      onConfirm={handleConfirmResult}
+      saving={savingResult}
+      onBack={resetCourt}
+      canConfirm={!matchEditsDirty}
+      adminKey={adminKey}
+      onAdminKeyChange={setAdminKey}
+    />
+  );
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="court-builder">
-        {!match && <>
+        {(!match || editingMatchId) && (
+          <section className={managingPendingMatch ? 'court-builder__management' : 'court-builder__form'}>
+          {managingPendingMatch && (
+            <header className="court-builder__management-heading">
+              <h3>Gestionar partido {match.number}</h3>
+              <p>Edita los equipos y registra el resultado desde esta sección.</p>
+            </header>
+          )}
+          <div className={managingPendingMatch ? 'court-builder__edit-section' : 'court-builder__form-fields'}>
+          {managingPendingMatch && <h4>Editar partido</h4>}
         <div className="court">
           <div className="court__side" data-team="a">
             <span className="court__label" data-team="a">
@@ -308,28 +391,20 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
           </span>
         </label>
 
-        {!match && (
-          <div className="court-builder__actions">
-            {!match && editingMatchId && (
-              <button type="button" className="court-builder__back" onClick={resetCourt}>
-                Cancelar
-              </button>
-            )}
+        <div className="court-builder__actions">
           <button
             type="button"
             className="court-builder__create"
-            disabled={!isComplete || creating}
+            disabled={!isComplete || creating || Boolean(editingMatchId && !matchEditsDirty)}
             onClick={handleSaveMatch}
           >
             {creating
               ? editingMatchId ? 'Guardando cambios…' : 'Creando partido…'
               : editingMatchId ? 'Guardar cambios del partido' : 'Crear partido con estas parejas'}
           </button>
-          </div>
-        )}
+        </div>
 
-         {!match && (
-          <div className="bench">
+        <div className="bench">
             <span className="bench__label">
               Banquillo — pulsa o arrastra a un hueco
             </span>
@@ -347,16 +422,17 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
                 />
               ))}
             </div>
+        </div>
           </div>
+        {managingPendingMatch && React.cloneElement(resultPanel, { showBack: false })}
+          </section>
         )}
-        </>}
 
         {!match && !editingMatchId && (
           <RoundMatches
             matches={matches}
             loading={matchesLoading}
-            onSelect={openMatch}
-            onEdit={startEditingMatch}
+            onManage={openManagement}
           />
         )}
 
@@ -364,16 +440,14 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
 
         {error && <p className="court-builder__error">{error}</p>}
 
-        {match && (
-          <>
-          <ResultPanel
-            key={`${match._id}-${match.winner || 'pending'}`}
-            match={match}
-            onConfirm={handleConfirmResult}
-            saving={savingResult}
-            onBack={() => setMatch(null)}
-          />
-          </>
+        {match && !editingMatchId && (
+          <section className="court-builder__management">
+            <header className="court-builder__management-heading">
+              <h3>Gestionar partido {match.number}</h3>
+              <p>{match.winner ? 'Edita el resultado de este partido.' : 'Añade el resultado de este partido.'}</p>
+            </header>
+            {resultPanel}
+          </section>
         )}
 
       </div>
@@ -381,7 +455,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   );
 }
 
-function RoundMatches({ matches, loading, onSelect, onEdit }) {
+function RoundMatches({ matches, loading, onManage }) {
   return (
     <section className="round-matches">
       <div className="round-matches__header">
@@ -463,20 +537,11 @@ function RoundMatches({ matches, loading, onSelect, onEdit }) {
                     </span>
                   )}
                 </div>
-                {pending ? (
-                  <div className="round-match__actions">
-                    <button type="button" onClick={() => onEdit(match)}>
-                      Editar
-                    </button>
-                    <button type="button" onClick={() => onSelect(match)}>
-                      Añadir resultado
-                    </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => onSelect(match)}>
-                    Editar resultado
+                <div className="round-match__actions">
+                  <button type="button" className="round-match__manage" onClick={() => onManage(match)}>
+                    Gestionar
                   </button>
-                )}
+                </div>
               </div>
             );
           })}

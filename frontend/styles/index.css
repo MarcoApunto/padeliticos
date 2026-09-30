@@ -449,6 +449,54 @@ button {
           flex-direction: column;
           gap: 20px;
         }
+        .court-builder__form-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .court-builder__management {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 16px;
+          border: 1px solid rgba(237, 235, 222, 0.14);
+          border-radius: var(--radius-lg);
+          background: var(--surface);
+        }
+        .court-builder__management-heading h3 {
+          margin: 0 0 4px;
+          color: var(--text);
+          font-size: 16px;
+        }
+        .court-builder__management-heading p {
+          margin: 0;
+          color: var(--text-muted);
+          font-size: 12px;
+        }
+        .court-builder__management .court-builder__edit-section { display: contents; }
+        .court-builder__management .court-builder__edit-section h4 {
+          margin: 0;
+          color: var(--text);
+          font-size: 16px;
+          font-weight: 700;
+        }
+        .court-builder__management .result-panel {
+          margin: 0;
+          padding: 0;
+          border-radius: 0;
+          background: transparent;
+        }
+        .court-builder__management .result-panel h3 {
+          margin: 0 0 12px;
+          font-size: 16px;
+          font-weight: 700;
+        }
+        .court-builder__management .result-panel__heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
         .court {
           display: grid;
           grid-template-columns: 1fr auto 1fr;
@@ -713,6 +761,7 @@ button {
           font-size: 12px;
         }
         .round-match__actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .round-match__manage { white-space: nowrap; }
         .round-match__status { color: var(--text-muted); font-size: 12px !important; }
         .round-match__head {
           display: flex;
@@ -788,6 +837,7 @@ button {
           font-size: 16px;
           margin-bottom: 12px;
         }
+        .result-panel__heading h3 { margin: 0 0 12px; }
         .result-panel__teams {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -877,6 +927,11 @@ button {
           min-width: 0;
           min-height: 46px;
           margin-top: 0;
+        }
+        .result-panel__unsaved {
+          margin: 12px 0 0;
+          color: var(--danger);
+          font-size: 12px;
         }
         @media (max-width: 480px) {
           .court-builder__actions,

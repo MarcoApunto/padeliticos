@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -17,7 +17,7 @@ const SLOT_IDS = ['a-0', 'a-1', 'b-0', 'b-1'];
 // Estado inicial de los 4 huecos de la pista, todos vacíos.
 const emptySlots = () => ({ 'a-0': null, 'a-1': null, 'b-0': null, 'b-1': null });
 
-export default function CourtBuilder({ players, round, onMatchClosed }) {
+export default function CourtBuilder({ players, round, onMatchClosed, onManagementChange }) {
   const [slots, setSlots] = useState(emptySlots);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [match, setMatch] = useState(null); // partido ya creado en backend
@@ -26,8 +26,11 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   const [matches, setMatches] = useState([]);
   const [matchesLoading, setMatchesLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [matchSaveState, setMatchSaveState] = useState('saved');
+  const [autoSaveRetry, setAutoSaveRetry] = useState(0);
   const [savingResult, setSavingResult] = useState(false);
   const [adminKey, setAdminKey] = useState('');
+  const autoSaveQueue = useRef(Promise.resolve());
   const [error, setError] = useState(null);
   // Contador local del siguiente número de partido dentro de esta ronda.
   // Arranca desde round.matchCount pero luego se lleva localmente para no
@@ -98,16 +101,23 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   const playerIdOf = (player) => (typeof player === 'string' ? player : player?._id);
   const editingMatch = matches.find((item) => item._id === editingMatchId) ||
     (match?._id === editingMatchId ? match : null);
-  const matchEditsDirty = Boolean(
+  const lineupDirty = Boolean(
     editingMatch && (
-      matchType !== (editingMatch.type === 'friendly' ? 'friendly' : 'competitive') ||
       slots['a-0'] !== playerIdOf(editingMatch.teamA.players[0]) ||
       slots['a-1'] !== playerIdOf(editingMatch.teamA.players[1]) ||
       slots['b-0'] !== playerIdOf(editingMatch.teamB.players[0]) ||
       slots['b-1'] !== playerIdOf(editingMatch.teamB.players[1])
     )
   );
+  const typeDirty = Boolean(
+    editingMatch && matchType !== (editingMatch.type === 'friendly' ? 'friendly' : 'competitive')
+  );
+  const matchEditsDirty = lineupDirty || typeDirty;
   const managingPendingMatch = Boolean(match && editingMatchId);
+
+  useEffect(() => {
+    onManagementChange?.(Boolean(match));
+  }, [match, onManagementChange]);
 
   // Misma regla que el backend: durante TODA la temporada se trabaja contra la
   // base de PRETEMPORADA (season.baseEloByPlayer), NO contra el currentElo
@@ -127,6 +137,59 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     const teamBElos = [slots['b-0'], slots['b-1']].map(eloForCard);
     return previewMatch(teamAElos, teamBElos);
   }, [isComplete, slots, playersById, seasonBaseByPlayer]);
+
+  useEffect(() => {
+    if (!editingMatchId || !editingMatch || !matchEditsDirty) return;
+
+    // El tipo se puede guardar usando la alineación persistida aunque el usuario
+    // esté sustituyendo un jugador y el formulario tenga un hueco temporal.
+    if (lineupDirty && !isComplete && !typeDirty) {
+      setMatchSaveState('waiting');
+      setError(null);
+      return;
+    }
+
+    const teamAPlayers = lineupDirty && isComplete
+      ? [slots['a-0'], slots['a-1']]
+      : editingMatch.teamA.players.map(playerIdOf);
+    const teamBPlayers = lineupDirty && isComplete
+      ? [slots['b-0'], slots['b-1']]
+      : editingMatch.teamB.players.map(playerIdOf);
+    const payload = {
+      number: editingMatch.number,
+      type: matchType,
+      teamA: { players: teamAPlayers },
+      teamB: { players: teamBPlayers },
+    };
+    let cancelled = false;
+    setMatchSaveState('saving');
+    setError(null);
+
+    const timer = setTimeout(() => {
+      const saveTask = autoSaveQueue.current
+        .catch(() => undefined)
+        .then(() => api.updateMatch(editingMatchId, payload));
+      autoSaveQueue.current = saveTask;
+
+      saveTask.then((updatedMatch) => {
+        if (cancelled) return;
+        setMatches((current) => current.map((item) =>
+          item._id === updatedMatch._id ? updatedMatch : item
+        ));
+        setMatch(updatedMatch);
+        setMatchSaveState('saved');
+      }).catch((err) => {
+        if (cancelled) return;
+        setMatchSaveState('error');
+        setError(err.message || 'No se pudieron guardar los cambios automáticamente');
+      });
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [editingMatchId, editingMatch, matchEditsDirty, lineupDirty, typeDirty, isComplete, slots, matchType, autoSaveRetry]);
 
   const liveResultMatch = (() => {
     if (!managingPendingMatch) return match;
@@ -200,6 +263,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     setEditingMatchId(null);
     setMatchType('competitive');
     setAdminKey('');
+    setMatchSaveState('saved');
     setError(null);
   }
 
@@ -208,6 +272,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
     setMatchType(selectedMatch.type === 'friendly' ? 'friendly' : 'competitive');
     setSelectedPlayerId(null);
     setError(null);
+    setMatchSaveState('saved');
     setSlots({
       'a-0': playerIdOf(selectedMatch.teamA.players[0]),
       'a-1': playerIdOf(selectedMatch.teamA.players[1]),
@@ -217,38 +282,23 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
   }
 
   async function handleSaveMatch() {
-    const matchIdToUpdate = editingMatchId;
     setCreating(true);
     setError(null);
     try {
-      const matchToUpdate = matches.find((item) => item._id === matchIdToUpdate);
       const payload = {
-        number: matchToUpdate ? matchToUpdate.number : nextMatchNumber,
+        number: nextMatchNumber,
         type: matchType,
         teamA: { players: [slots['a-0'], slots['a-1']] },
         teamB: { players: [slots['b-0'], slots['b-1']] },
       };
-      let createdMatchId = null;
-      if (matchIdToUpdate) {
-        await api.updateMatch(matchIdToUpdate, payload);
-      } else {
-        const created = await api.createMatch(round._id, payload);
-        setNextMatchNumber((n) => n + 1);
-        createdMatchId = created._id;
-      }
+      const created = await api.createMatch(round._id, payload);
+      setNextMatchNumber((n) => n + 1);
       const updatedMatches = await api.getMatches(round._id);
       setMatches(updatedMatches);
-      if (matchIdToUpdate) {
-        const updatedMatch = updatedMatches.find((item) => item._id === matchIdToUpdate);
-        if (updatedMatch) setMatch(updatedMatch);
-      } else {
-        setSlots(emptySlots());
-      }
+      setSlots(emptySlots());
       // Abrimos directamente el panel de resultado del partido recién creado.
-      if (createdMatchId) {
-        const populated = updatedMatches.find((item) => item._id === createdMatchId);
-        setMatch(populated || null);
-      }
+      const populated = updatedMatches.find((item) => item._id === created._id);
+      setMatch(populated || null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -319,9 +369,14 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
         {(!match || editingMatchId) && (
           <section className={managingPendingMatch ? 'court-builder__management' : 'court-builder__form'}>
           {managingPendingMatch && (
-            <header className="court-builder__management-heading">
-              <h3>Gestionar partido {match.number}</h3>
-              <p>Edita los equipos y registra el resultado desde esta sección.</p>
+            <header className="court-builder__management-heading court-builder__management-heading--editable">
+              <div className="court-builder__management-copy">
+                <h3>Gestionar partido {match.number}</h3>
+                <p>Edita los equipos y registra el resultado desde esta sección.</p>
+              </div>
+              <button type="button" className="court-builder__discard" onClick={resetCourt}>
+                Volver a partidos
+              </button>
             </header>
           )}
           <div className={managingPendingMatch ? 'court-builder__edit-section' : 'court-builder__form-fields'}>
@@ -392,16 +447,30 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
         </label>
 
         <div className="court-builder__actions">
-          <button
-            type="button"
-            className="court-builder__create"
-            disabled={!isComplete || creating || Boolean(editingMatchId && !matchEditsDirty)}
-            onClick={handleSaveMatch}
-          >
-            {creating
-              ? editingMatchId ? 'Guardando cambios…' : 'Creando partido…'
-              : editingMatchId ? 'Guardar cambios del partido' : 'Crear partido con estas parejas'}
-          </button>
+          {editingMatchId ? (
+            <div className="court-builder__autosave-row">
+              <p className="court-builder__autosave" data-state={matchSaveState} role="status">
+                {matchSaveState === 'saving' && 'Guardando automáticamente…'}
+                {matchSaveState === 'waiting' && 'Completa los cuatro jugadores para guardar la alineación.'}
+                {matchSaveState === 'error' && 'No se pudo guardar automáticamente.'}
+                {matchSaveState === 'saved' && 'Cambios guardados automáticamente.'}
+              </p>
+              {matchSaveState === 'error' && (
+                <button type="button" className="court-builder__autosave-retry" onClick={() => setAutoSaveRetry((count) => count + 1)}>
+                  Reintentar
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="court-builder__create"
+              disabled={!isComplete || creating}
+              onClick={handleSaveMatch}
+            >
+              {creating ? 'Creando partido…' : 'Crear partido con estas parejas'}
+            </button>
+          )}
         </div>
 
         <div className="bench">
@@ -541,6 +610,7 @@ function RoundMatches({ matches, loading, onManage }) {
                   <button type="button" className="round-match__manage" onClick={() => onManage(match)}>
                     Gestionar
                   </button>
+                  {pending && <span className="round-match__pending">Pendiente</span>}
                 </div>
               </div>
             );

@@ -17,12 +17,17 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [round, setRound] = useState(null);
+  const [matchManagementOpen, setMatchManagementOpen] = useState(false);
   const [toast, setToast] = useState(null);
   // Zonas ocultas, accesibles por URL: /admin y /apuestas.
   const [route, setRoute] = useState(() => window.location.pathname);
 
   const adminOpen = route === '/admin';
   const betsOpen = route === '/apuestas';
+
+  useEffect(() => {
+    if (tab !== 'match' || adminOpen || betsOpen) setMatchManagementOpen(false);
+  }, [tab, adminOpen, betsOpen]);
 
   useEffect(() => {
     function handleNavigation() {
@@ -96,12 +101,13 @@ export default function App() {
 
       {!loading && !error && !adminOpen && !betsOpen && tab === 'match' && (
         <>
-          <SeasonRoundPicker onRoundReady={setRound} />
+          {!matchManagementOpen && <SeasonRoundPicker onRoundReady={setRound} />}
           {round ? (
             <CourtBuilder
               players={activePlayers}
               round={round}
               onMatchClosed={handleMatchClosed}
+              onManagementChange={setMatchManagementOpen}
             />
           ) : (
             <p className="text-muted">

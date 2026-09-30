@@ -179,7 +179,7 @@ export default function ResultPanel({ match, onConfirm, saving, onBack, canConfi
 
       {!canConfirm && (
         <p className="result-panel__unsaved" role="status">
-          Guarda primero los cambios del partido para confirmar el resultado con los equipos actualizados.
+          Completa los cuatro jugadores y espera al guardado automático antes de confirmar el resultado.
         </p>
       )}
 

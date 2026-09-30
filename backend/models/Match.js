@@ -35,6 +35,7 @@ const matchSchema = new Schema(
   {
     round: { type: Schema.Types.ObjectId, ref: 'Round', required: true },
     number: { type: Number, required: true }, // "Partido 1", "Partido 2"...
+    type: { type: String, enum: ['competitive', 'friendly'], default: 'competitive' },
     teamA: { type: teamSchema, required: true },
     teamB: { type: teamSchema, required: true },
     // Marcador (opcional): puntos anotados por cada equipo, p. ej. 6 - 2.

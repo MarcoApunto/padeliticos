@@ -215,7 +215,8 @@ export const getAll = async (req, res) => {
 // Histórico (partidos, V/D) de cada PAREJA concreta en partidos ya jugados.
 // La clave es "idJugador1|idJugador2" con los ids ordenados.
 export const getPairStats = async (req, res) => {
-  const matches = await Match.find({ winner: { $ne: null } })
+  const typeFilter = req.query.type === 'friendly' ? 'friendly' : { $ne: 'friendly' };
+  const matches = await Match.find({ winner: { $ne: null }, type: typeFilter })
     .select('winner teamA.players teamB.players')
     .lean();
   res.json(computePairStats(matches));
@@ -236,6 +237,10 @@ export const getOne = async (req, res) => {
 // diferencia de elo), igual que el Excel se autocompleta antes de fijar el ganador.
 export const create = async (req, res) => {
   const { number, teamA, teamB } = req.body;
+  const type = req.body.type ?? 'competitive';
+  if (!['competitive', 'friendly'].includes(type)) {
+    throw new HttpError(400, 'type debe ser competitive o friendly');
+  }
 
   const round = await Round.findById(req.params.roundId).populate('season');
   if (!round) return res.status(404).json({ error: 'Ronda no encontrada' });
@@ -243,7 +248,7 @@ export const create = async (req, res) => {
   try {
     const baseEloByPlayer = round.season?.baseEloByPlayer;
     const data = await resolveTeamData(number, teamA, teamB, baseEloByPlayer);
-    const match = await Match.create({ round: req.params.roundId, ...data });
+    const match = await Match.create({ round: req.params.roundId, type, ...data });
 
     res.status(201).json(match);
   } catch (err) {
@@ -260,6 +265,10 @@ export const create = async (req, res) => {
 // Permite corregir las parejas o el número mientras el partido siga pendiente.
 export const updatePending = async (req, res) => {
   const { number, teamA, teamB } = req.body;
+  const type = req.body.type;
+  if (type !== undefined && !['competitive', 'friendly'].includes(type)) {
+    throw new HttpError(400, 'type debe ser competitive o friendly');
+  }
 
   const match = await Match.findById(req.params.id);
   if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
@@ -274,6 +283,7 @@ export const updatePending = async (req, res) => {
     const base = round?.season?.baseEloByPlayer;
     const data = await resolveTeamData(number, teamA, teamB, base);
     match.number = data.number;
+    if (type !== undefined) match.type = type;
     match.teamA = data.teamA;
     match.teamB = data.teamB;
     match.eloDifference = data.eloDifference;
@@ -352,14 +362,17 @@ export const setResult = async (req, res) => {
       const round = await Round.findById(match.round).session(session);
       const season = await Season.findById(round.season).session(session);
 
-      const { teamAFinal, teamBFinal } = computeFinalElos(
-        match.teamA.eloBefore,
-        match.teamB.eloBefore,
-        winner,
-        ELO_K_FACTOR,
-        teamANotes,
-        teamBNotes
-      );
+      const friendly = match.type === 'friendly';
+      const { teamAFinal, teamBFinal } = friendly
+        ? { teamAFinal: [...match.teamA.eloBefore], teamBFinal: [...match.teamB.eloBefore] }
+        : computeFinalElos(
+            match.teamA.eloBefore,
+            match.teamB.eloBefore,
+            winner,
+            ELO_K_FACTOR,
+            teamANotes,
+            teamBNotes
+          );
 
       // Elo ACTUAL ("en vivo" acumulado) de los 4 jugadores, para sumar el
       // delta de este partido encima y que el Historial muestre las sumas.
@@ -382,12 +395,12 @@ export const setResult = async (req, res) => {
           const despues = clampElo(antes + (finalElos[i] - beforeElos[i]));
           return { playerId: id, eloBefore: antes, eloAfter: despues };
         });
-      const updatesA = acumular(
+      const updatesA = friendly ? [] : acumular(
         match.teamA.players.map(String),
         match.teamA.eloBefore,
         teamAFinal
       );
-      const updatesB = acumular(
+      const updatesB = friendly ? [] : acumular(
         match.teamB.players.map(String),
         match.teamB.eloBefore,
         teamBFinal

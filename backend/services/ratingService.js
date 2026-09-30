@@ -28,7 +28,7 @@ function roundNumber(match) {
 }
 
 export async function rebuildRatings(removedMatchIds = []) {
-  const [players, matches, seasons] = await Promise.all([
+  const [players, allPlayedMatches, seasons] = await Promise.all([
     Player.find(),
     Match.find({ winner: { $ne: null } }).populate({
       path: 'round',
@@ -37,6 +37,9 @@ export async function rebuildRatings(removedMatchIds = []) {
     }),
     Season.find().sort({ createdAt: 1 }),
   ]);
+
+  // Los amistosos conservan resultados y apuestas, pero no afectan al Elo.
+  const matches = allPlayedMatches.filter((match) => match.type !== 'friendly');
 
   matches.sort(compareMatches);
 
@@ -167,7 +170,7 @@ export async function rebuildRatings(removedMatchIds = []) {
   }
 
   const historyMatchIds = [
-    ...matches.map((match) => match._id),
+    ...allPlayedMatches.map((match) => match._id),
     ...removedMatchIds,
   ];
   await EloHistory.deleteMany({ match: { $in: historyMatchIds } });

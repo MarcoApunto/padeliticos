@@ -132,3 +132,22 @@ export const updatePendingMatch = async (req, res) => {
   }
   res.json(match);
 };
+
+export const updateMatchType = async (req, res) => {
+  const { type } = req.body;
+  if (!['competitive', 'friendly'].includes(type)) {
+    return res.status(400).json({ error: 'type debe ser competitive o friendly' });
+  }
+  const match = await Match.findById(req.params.id);
+  if (!match) return res.status(404).json({ error: 'Partido no encontrado' });
+  if (match.type === type) return res.json(match);
+
+  match.type = type;
+  await match.save();
+  if (match.winner) await rebuildRatingsFromDb();
+
+  const updated = await Match.findById(match._id)
+    .populate('teamA.players', 'name currentElo')
+    .populate('teamB.players', 'name currentElo');
+  res.json(updated);
+};

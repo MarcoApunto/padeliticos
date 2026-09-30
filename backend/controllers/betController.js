@@ -10,7 +10,7 @@ function populatedBet(query) {
     .populate('bettor', 'name balance active')
     .populate({
       path: 'match',
-      select: 'number winner teamA teamB winProbability round',
+      select: 'number winner type teamA teamB winProbability round',
       populate: [
         { path: 'teamA.players', select: 'name' },
         { path: 'teamB.players', select: 'name' },

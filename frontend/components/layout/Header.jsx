@@ -54,11 +54,11 @@ export default function Header({ active, onChange, brand = 'Padeliticos', hideNa
           }}
         >
           {brand === 'Padeliticos' ? (
-            <>Padel<span className="header__brand-accent">itic<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} />s</span></>
+            <>Padel<span className="header__brand-accent">ític<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} />s</span></>
           ) : brand === 'Super Padelitico' ? (
-            <>Super <span className="header__brand-accent">Padelitic<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} /></span></>
+            <>Super <span className="header__brand-accent">Padelític<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} /></span></>
           ) : (
-            <>Padelitic<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} /> <span className="header__brand-accent">Apuestas</span></>
+            <>Padelític<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} />s <span className="header__brand-accent">Apuestas</span></>
           )}
         </button>
       </h1>

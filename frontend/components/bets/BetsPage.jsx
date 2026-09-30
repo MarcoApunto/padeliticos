@@ -64,9 +64,9 @@ export default function BetsPage() {
         pretemporada). A menor cuota, más favorito.
       </p>
 
-      <div className="match-type-tabs" role="tablist" aria-label="Tipo de partidos para apostar">
-        <button type="button" role="tab" aria-selected={matchType === 'competitive'} onClick={() => setMatchType('competitive')}>Competitivos</button>
-        <button type="button" role="tab" aria-selected={matchType === 'friendly'} onClick={() => setMatchType('friendly')}>Amistosos</button>
+      <div className="match-type-tabs" role="group" aria-label="Tipo de partidos para apostar">
+        <button type="button" aria-pressed={matchType === 'competitive'} onClick={() => setMatchType('competitive')}>Competitivos</button>
+        <button type="button" aria-pressed={matchType === 'friendly'} onClick={() => setMatchType('friendly')}>Amistosos</button>
       </div>
 
       {visibleMatches.length === 0 ? (

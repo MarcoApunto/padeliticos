@@ -22,6 +22,14 @@ export default function TeamSlot({
       data-over={isOver || undefined}
       onClick={() => !player && onClickEmpty(id)}
       role={player ? undefined : 'button'}
+      tabIndex={player ? undefined : 0}
+      aria-label={!player ? `Añadir jugador al equipo ${team.toUpperCase()}` : undefined}
+      onKeyDown={(event) => {
+        if (!player && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClickEmpty(id);
+        }
+      }}
     >
       {player ? (
         <>

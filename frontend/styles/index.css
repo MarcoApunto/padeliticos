@@ -1,5 +1,4 @@
 :root {
-  /* Color — pista de pádel cubierta por la noche */
   --bg: #0e2a27;
   --surface: #153833;
   --surface-raised: #1b423c;
@@ -399,8 +398,80 @@ button {
           font-size: 22px;
           font-weight: 700;
         }
-        .header h1 span {
+        .header__brand {
+          display: inline;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: inherit;
+          font: inherit;
+          letter-spacing: inherit;
+          text-align: left;
+        }
+        .header__brand-accent {
           color: var(--accent);
+        }
+        .header__logo-o {
+          position: relative;
+          display: inline-block;
+        }
+        .header__logo-o[data-run] .header__logo-letter {
+          animation: header-logo-letter-hide 1.45s ease-in both;
+        }
+        @keyframes header-logo-letter-hide {
+          0%, 86% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .header__logo-ball {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 0.68em;
+          height: 0.68em;
+          opacity: 0;
+          pointer-events: none;
+          transform: translate(calc(-50% + var(--logo-ball-start-x, -5em)), calc(-50% - 0.2em)) scale(0.8);
+        }
+        .header__logo-o[data-run] .header__logo-ball {
+          animation: header-logo-bounce 1.45s linear both;
+        }
+        @keyframes header-logo-bounce {
+          0% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--logo-ball-start-x, -5em)), calc(-50% - 0.92em)) scale(0.84) rotate(-35deg);
+          }
+          6% {
+            opacity: 1;
+            transform: translate(calc(-50% + var(--logo-ball-start-x, -5em)), calc(-50% - 0.92em)) scale(0.84) rotate(-35deg);
+          }
+          28% {
+            opacity: 1;
+            transform: translate(calc(-50% - 3.3em), calc(-50% - 1.24em)) scale(0.88) rotate(28deg);
+          }
+          43% {
+            transform: translate(calc(-50% - 2.15em), calc(-50% - 0.42em)) scale(0.92) rotate(82deg);
+          }
+          54% {
+            transform: translate(calc(-50% - 1.72em), calc(-50% - 0.92em)) scale(0.92) rotate(112deg);
+          }
+          72% {
+            transform: translate(calc(-50% - 0.78em), calc(-50% - 0.46em)) scale(0.96) rotate(168deg);
+          }
+          86% {
+            transform: translate(calc(-50% - 0.2em), calc(-50% - 0.2em)) scale(0.98) rotate(205deg);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1) rotate(180deg);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .header__logo-o[data-run] .header__logo-letter { opacity: 0; }
+          .header__logo-o[data-run] .header__logo-ball {
+            animation: none;
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
         }
         .header nav {
           display: flex;
@@ -672,7 +743,7 @@ button {
           color: var(--text-muted);
           cursor: pointer;
         }
-        .match-type-tabs button[aria-selected='true'] {
+        .match-type-tabs button[aria-pressed='true'] {
           border-color: var(--accent);
           color: var(--accent);
           background: rgba(198, 241, 53, 0.08);
@@ -856,6 +927,12 @@ button {
           color: var(--text);
           text-align: left;
           touch-action: none;
+        }
+        @media (pointer: coarse) {
+          .player-card {
+            /* En táctil el flujo seleccionar-y-pulsar permite desplazar la página. */
+            touch-action: pan-y;
+          }
         }
         .player-card:hover {
           border-color: rgba(237, 235, 222, 0.28);
@@ -1916,7 +1993,31 @@ button {
   border-radius: var(--radius-sm);
   cursor: grab;
   user-select: none;
-  touch-action: none;
+}
+
+.bettor-card__select {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: grab;
+}
+
+.bettor-card__select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+@media (pointer: coarse) {
+  .bettor-card__select { touch-action: pan-y; }
 }
 
 .bettor-card:hover {
@@ -1966,12 +2067,18 @@ button {
 }
 
 .bettor-card__actions button {
-  font-size: 10.5px;
-  padding: 2px 6px;
+  min-height: 32px;
+  padding: 5px 8px;
   border: 1px solid rgba(237, 235, 222, 0.2);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
+  font: inherit;
+  font-size: 11.5px;
+}
+
+@media (pointer: coarse) {
+  .bettor-card__actions button { min-height: 40px; }
 }
 
 .bettor-card__actions button:hover {

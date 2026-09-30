@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <clipPath id="ball-fav"><circle cx="16" cy="16" r="15"/></clipPath>
+  </defs>
+  <circle cx="16" cy="16" r="15" fill="#93ad2c"/>
+  <g clip-path="url(#ball-fav)">
+    <circle cx="14" cy="14" r="15" fill="#c6f135"/>
+    <path d="M25.5 3.2C26.2 10.7 18.7 14.6 12.6 18.7C7.8 22.1 8.5 28.3 11.9 32.4"
+          stroke="#e2604f" stroke-width="3.2" stroke-linecap="round"/>
+  </g>
+</svg>

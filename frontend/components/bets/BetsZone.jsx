@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -12,6 +12,54 @@ import { cuota, cuotaNumber, pairKey } from './betsUtils.js';
 
 function matchIdOf(bet) {
   return bet.match?._id || bet.match;
+}
+
+function handleModalKeyDown(event, onClose) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    onClose();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+
+  const focusable = Array.from(
+    event.currentTarget.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  );
+  if (focusable.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && (document.activeElement === first || !event.currentTarget.contains(document.activeElement))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (document.activeElement === last || !event.currentTarget.contains(document.activeElement))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function useModalFocusReturn() {
+  const dialogRef = useRef(null);
+  const previousFocus = useRef(
+    typeof document === 'undefined' ? null : document.activeElement
+  );
+
+  useEffect(() => () => {
+    // Wait until React has detached the dialog; this also avoids stealing focus
+    // during StrictMode's development-only effect cleanup cycle.
+    Promise.resolve().then(() => {
+      if (!dialogRef.current?.isConnected && previousFocus.current?.isConnected) {
+        previousFocus.current.focus();
+      }
+    });
+  }, []);
+
+  return dialogRef;
 }
 
 export default function BetsZone({ onClose }) {
@@ -378,9 +426,9 @@ export default function BetsZone({ onClose }) {
                   </div>
                 )}
               </div>
-              <div className="match-type-tabs" role="tablist" aria-label="Tipo de partidos para apostar">
-                <button type="button" role="tab" aria-selected={activeMatchType === 'competitive'} onClick={() => { setActiveMatchType('competitive'); setActiveRoundIndex(0); }}>Competitivos</button>
-                <button type="button" role="tab" aria-selected={activeMatchType === 'friendly'} onClick={() => { setActiveMatchType('friendly'); setActiveRoundIndex(0); }}>Amistosos</button>
+              <div className="match-type-tabs" role="group" aria-label="Tipo de partidos para apostar">
+                <button type="button" aria-pressed={activeMatchType === 'competitive'} onClick={() => { setActiveMatchType('competitive'); setActiveRoundIndex(0); }}>Competitivos</button>
+                <button type="button" aria-pressed={activeMatchType === 'friendly'} onClick={() => { setActiveMatchType('friendly'); setActiveRoundIndex(0); }}>Amistosos</button>
               </div>
               {loading && <p className="text-muted">Cargando…</p>}
               {!loading && rounds.length === 0 && (
@@ -608,23 +656,27 @@ function BettorCard({ bettor, available, selected, onSelect, onTopUp, onToggle }
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
       className="bettor-card"
       data-selected={selected || undefined}
       data-dragging={isDragging || undefined}
       data-inactive={!bettor.active || undefined}
-      onClick={() => onSelect(bettor._id)}
-      role="button"
-      tabIndex={0}
     >
-      <span className="bettor-card__name">{bettor.name}</span>
-      <span className="bettor-card__balance numeric">
-        {bettor.balance.toFixed(2)} <small>Mglt</small>
-      </span>
-      <span className="bettor-card__available numeric">
-        Libre: {Math.max(0, available).toFixed(2)} Mglt
-      </span>
+      <button
+        type="button"
+        className="bettor-card__select"
+        {...listeners}
+        {...attributes}
+        aria-label={`${selected ? 'Quitar selección de' : 'Seleccionar'} ${bettor.name}; saldo libre ${Math.max(0, available).toFixed(2)} Megalitos`}
+        onClick={() => onSelect(bettor._id)}
+      >
+        <span className="bettor-card__name">{bettor.name}</span>
+        <span className="bettor-card__balance numeric">
+          {bettor.balance.toFixed(2)} <small>Mglt</small>
+        </span>
+        <span className="bettor-card__available numeric">
+          Libre: {Math.max(0, available).toFixed(2)} Mglt
+        </span>
+      </button>
       <div className="bettor-card__actions">
         <button type="button" onClick={(event) => { event.stopPropagation(); onTopUp(); }}>
           Ajustar
@@ -726,6 +778,16 @@ function BetZoneSide({
         data-disabled={disabled || undefined}
         onClick={disabled ? undefined : () => onSideClick(teamNumber)}
         role={!disabled && selectedBettorId ? 'button' : undefined}
+        tabIndex={!disabled && selectedBettorId ? 0 : undefined}
+        aria-label={!disabled && selectedBettorId
+          ? `Apostar por ${teamData.players.map((player) => player.name).join(' y ')}; cuota ${cuotaValue}`
+          : undefined}
+        onKeyDown={(event) => {
+          if (!disabled && selectedBettorId && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            onSideClick(teamNumber);
+          }
+        }}
       >
         <div className="bet-side__line">
           <span className="bet-side__name">
@@ -822,6 +884,8 @@ function BetAmountModal({
   onConfirm,
 }) {
   const [amount, setAmount] = useState(String(initialAmount));
+  const titleId = useId();
+  const dialogRef = useModalFocusReturn();
   const teamData = team === 1 ? match.teamA : match.teamB;
   const hasCuota = Number.isFinite(cuota);
   const amountNum = Number(amount);
@@ -831,9 +895,16 @@ function BetAmountModal({
   const after = valid ? Math.max(0, maxAmount - amountNum) : Math.max(0, maxAmount);
 
   return (
-    <div className="bets-modal" role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      className="bets-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      onKeyDown={(event) => handleModalKeyDown(event, onClose)}
+    >
       <div className="bets-modal__card">
-        <h3>{title}</h3>
+        <h3 id={titleId}>{title}</h3>
         <p className="text-muted">
           {match.round?.season?.name}{match.round ? ` · Ronda ${match.round.number}` : ''}
           {' · '}Partido {match.number}
@@ -889,14 +960,23 @@ function NewBettorModal({ saving, onClose, onSave }) {
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('0');
   const [localAdminKey, setLocalAdminKey] = useState('');
+  const titleId = useId();
+  const dialogRef = useModalFocusReturn();
   const balanceNum = Number(balance) || 0;
   const needsAdmin = balanceNum > 0;
   const valid = name.trim().length > 0 && (!needsAdmin || localAdminKey.trim().length > 0);
 
   return (
-    <div className="bets-modal" role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      className="bets-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      onKeyDown={(event) => handleModalKeyDown(event, onClose)}
+    >
       <div className="bets-modal__card">
-        <h3>Añadir apostador</h3>
+        <h3 id={titleId}>Añadir apostador</h3>
         <label className="bets-field">
           <span>Nombre</span>
           <input autoFocus value={name} onChange={(event) => setName(event.target.value)} />
@@ -946,6 +1026,8 @@ function NewBettorModal({ saving, onClose, onSave }) {
 function TopUpModal({ bettor, available, saving, onClose, onSave }) {
   const [amount, setAmount] = useState('50');
   const [localAdminKey, setLocalAdminKey] = useState('');
+  const titleId = useId();
+  const dialogRef = useModalFocusReturn();
   const amountNum = Number(amount);
   const canWithdraw = amountNum < 0 ? -amountNum <= available + 1e-9 : true;
   const valid =
@@ -955,9 +1037,16 @@ function TopUpModal({ bettor, available, saving, onClose, onSave }) {
     canWithdraw;
 
   return (
-    <div className="bets-modal" role="dialog" aria-modal="true">
+    <div
+      ref={dialogRef}
+      className="bets-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      onKeyDown={(event) => handleModalKeyDown(event, onClose)}
+    >
       <div className="bets-modal__card">
-        <h3>Ajustar Megalitos de {bettor.name}</h3>
+        <h3 id={titleId}>Ajustar Megalitos de {bettor.name}</h3>
         <p className="text-muted">
           Saldo actual: <span className="numeric">{bettor.balance.toFixed(2)} Mglt</span>
           {' · '}Libre: <span className="numeric">{Math.max(0, available).toFixed(2)} Mglt</span>

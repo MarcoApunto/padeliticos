@@ -491,6 +491,16 @@ button {
           color: var(--text-muted);
           cursor: not-allowed;
         }
+        .court-builder__actions {
+          display: flex;
+          align-items: stretch;
+          gap: 10px;
+          width: 100%;
+        }
+        .court-builder__actions .court-builder__create {
+          flex: 1;
+          min-width: 0;
+        }
         .match-type-toggle {
           display: flex;
           align-items: center;
@@ -611,11 +621,26 @@ button {
         }
         .court-builder__back {
           align-self: flex-start;
-          padding: 8px 12px;
-          border: 1px solid rgba(237, 235, 222, 0.2);
-          border-radius: var(--radius-sm);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 46px;
+          padding: 12px 16px;
+          border: 1px solid var(--danger);
+          border-radius: var(--radius-md);
           background: transparent;
-          color: var(--text-muted);
+          color: var(--danger);
+          font: inherit;
+        }
+        .court-builder__back:hover {
+          background: rgba(226, 96, 79, 0.08);
+        }
+        .court-builder__actions .court-builder__back {
+          align-self: stretch;
+          white-space: nowrap;
+        }
+        .court-builder__actions .court-builder__create {
+          min-height: 46px;
         }
         .bench {
           display: flex;
@@ -835,6 +860,34 @@ button {
           color: var(--bg);
           font-weight: 600;
           font-size: 14px;
+        }
+        .result-panel__actions {
+          display: flex;
+          align-items: stretch;
+          gap: 10px;
+          margin-top: 16px;
+        }
+        .result-panel__actions .court-builder__back {
+          align-self: stretch;
+          white-space: nowrap;
+        }
+        .result-panel__actions .result-panel__confirm {
+          flex: 1;
+          width: auto;
+          min-width: 0;
+          min-height: 46px;
+          margin-top: 0;
+        }
+        @media (max-width: 480px) {
+          .court-builder__actions,
+          .result-panel__actions {
+            flex-direction: column-reverse;
+          }
+          .court-builder__actions .court-builder__back,
+          .result-panel__actions .court-builder__back {
+            align-self: stretch;
+            text-align: center;
+          }
         }
         .result-panel__confirm:disabled {
           background: var(--surface-raised);

@@ -309,6 +309,12 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
         </label>
 
         {!match && (
+          <div className="court-builder__actions">
+            {!match && editingMatchId && (
+              <button type="button" className="court-builder__back" onClick={resetCourt}>
+                Cancelar
+              </button>
+            )}
           <button
             type="button"
             className="court-builder__create"
@@ -319,11 +325,7 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
               ? editingMatchId ? 'Guardando cambios…' : 'Creando partido…'
               : editingMatchId ? 'Guardar cambios del partido' : 'Crear partido con estas parejas'}
           </button>
-        )}
-        {!match && editingMatchId && (
-          <button type="button" className="court-builder__back" onClick={resetCourt}>
-            Cancelar edición
-          </button>
+          </div>
         )}
 
          {!match && (
@@ -364,14 +366,12 @@ export default function CourtBuilder({ players, round, onMatchClosed }) {
 
         {match && (
           <>
-            <button type="button" className="court-builder__back" onClick={() => setMatch(null)}>
-              Volver a los partidos de la ronda
-            </button>
           <ResultPanel
             key={`${match._id}-${match.winner || 'pending'}`}
             match={match}
             onConfirm={handleConfirmResult}
             saving={savingResult}
+            onBack={() => setMatch(null)}
           />
           </>
         )}

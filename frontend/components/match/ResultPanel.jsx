@@ -10,7 +10,7 @@ import {
 // quiere, la nota (0-10) de cada jugador y el marcador por puntos. Al confirmar,
 // se cierra el partido vía PATCH /matches/:id/result, que es donde el servidor
 // calcula y persiste el elo final de verdad.
-export default function ResultPanel({ match, onConfirm, saving }) {
+export default function ResultPanel({ match, onConfirm, saving, onBack }) {
   const [winner, setWinner] = useState(match.winner || null);
   const [adminKey, setAdminKey] = useState('');
   const [notes, setNotes] = useState({
@@ -167,24 +167,29 @@ export default function ResultPanel({ match, onConfirm, saving }) {
         />
       </label>
 
-      <button
-        type="button"
-        className="result-panel__confirm"
-        disabled={!winner || saving || halfScore || !adminKey}
-        onClick={() =>
-          onConfirm({
-            winner,
-            teamANotes: notes.a.some((n) => n !== undefined) ? notes.a : undefined,
-            teamBNotes: notes.b.some((n) => n !== undefined) ? notes.b : undefined,
-            score: scoreComplete
-              ? { teamA: Number(score.a), teamB: Number(score.b) }
-              : undefined,
-            adminKey,
-          })
-        }
-      >
-      {saving ? 'Guardando…' : match.winner ? 'Guardar cambios' : 'Confirmar resultado'}
-      </button>
+      <div className="result-panel__actions">
+        <button type="button" className="court-builder__back" onClick={onBack}>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          className="result-panel__confirm"
+          disabled={!winner || saving || halfScore || !adminKey}
+          onClick={() =>
+            onConfirm({
+              winner,
+              teamANotes: notes.a.some((n) => n !== undefined) ? notes.a : undefined,
+              teamBNotes: notes.b.some((n) => n !== undefined) ? notes.b : undefined,
+              score: scoreComplete
+                ? { teamA: Number(score.a), teamB: Number(score.b) }
+                : undefined,
+              adminKey,
+            })
+          }
+        >
+          {saving ? 'Guardando…' : match.winner ? 'Guardar cambios' : 'Confirmar resultado'}
+        </button>
+      </div>
     </div>
   );
 }

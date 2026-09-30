@@ -12,7 +12,6 @@ const TABS = [
 export default function Header({ active, onChange, brand = 'Padeliticos', hideNavigation = false }) {
   const [animationRun, setAnimationRun] = useState(0);
   const [ballStartX, setBallStartX] = useState('-5em');
-  const pointerType = useRef(null);
   const brandRef = useRef(null);
   const logoORef = useRef(null);
   const loadAnimationStarted = useRef(false);
@@ -37,20 +36,13 @@ export default function Header({ active, onChange, brand = 'Padeliticos', hideNa
   return (
     <header className="header">
       <h1>
-        <button
-          type="button"
+        <a
+          href="/"
           className="header__brand"
           ref={brandRef}
-          aria-label={`${brand}; animar logotipo`}
-          onPointerDown={(event) => { pointerType.current = event.pointerType; }}
+          aria-label={`${brand}, ir a la página principal`}
           onPointerEnter={(event) => {
             if (event.pointerType === 'mouse') triggerLogoAnimation();
-          }}
-          onClick={(event) => {
-            if (pointerType.current === 'touch' || event.detail === 0) {
-              triggerLogoAnimation();
-            }
-            pointerType.current = null;
           }}
         >
           {brand === 'Padeliticos' ? (
@@ -60,7 +52,7 @@ export default function Header({ active, onChange, brand = 'Padeliticos', hideNa
           ) : (
             <>Padelític<LogoBallO ref={logoORef} animationRun={animationRun} ballStartX={ballStartX} />s <span className="header__brand-accent">Apuestas</span></>
           )}
-        </button>
+        </a>
       </h1>
       {!hideNavigation && (
         <nav aria-label="Secciones principales">
